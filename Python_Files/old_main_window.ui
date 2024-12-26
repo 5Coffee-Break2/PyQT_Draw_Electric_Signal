@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1042</width>
+    <height>580</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>514</x>
+      <y>14</y>
+      <width>101</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <weight>75</weight>
+      <italic>true</italic>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Voltage (v)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>14</y>
+      <width>101</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <weight>75</weight>
+      <italic>true</italic>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Time (Sec)</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="get_Sys_portsBtn">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>330</y>
+      <width>111</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>Availabell Ports</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="read_Rx_Data_Btn">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>410</y>
+      <width>111</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>Read Rx Data</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="select_Port_Btn">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>370</y>
+      <width>136</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>Open Selected  Port</string>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="time_LstVu">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>40</y>
+      <width>120</width>
+      <height>301</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="volt_LstVu">
+    <property name="geometry">
+     <rect>
+      <x>490</x>
+      <y>40</y>
+      <width>120</width>
+      <height>301</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="ser_ports_LstVu">
+    <property name="geometry">
+     <rect>
+      <x>19</x>
+      <y>130</y>
+      <width>281</width>
+      <height>180</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="ser_Port_Info_LabCrl">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>36</y>
+      <width>281</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>TextLabel</string>
+    </property>
+   </widget>
+   <widget class="QTableWidget" name="volt_time_Tabel">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>40</y>
+      <width>256</width>
+      <height>401</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1042</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

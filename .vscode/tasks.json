@@ -1,0 +1,21 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Convert Ui file to Py File",
+            "type": "shell",
+            "command": "python -m PyQt6.uic.pyuic -o G:\\Projects\\MS_VCode\\PyQT_Draw_Electric_Signal\\Python_Files\\main_window.py -x G:\\Projects\\MS_VCode\\PyQT_Draw_Electric_Signal\\Python_Files\\main_window.ui",
+            "problemMatcher": []
+        },
+        {
+            "label": "Edit Main Window UI",
+            "type": "shell",
+            "command": "I:\\Coding\\Py_QT Designer\\designer.exe",
+            "args":["G:\\Projects\\MS_VCode\\PyQT_Draw_Electric_Signal\\Python_Files\\main_window.ui"], 
+            "problemMatcher": []
+        }
+    ]
+}
+//-x G:\\Projects\\MS_VCode\\PyQT Draw Electric Signal\\Python_Files\\main_window.ui -o G:\\Projects\\MS_VCode\\PyQT Draw Electric Signal\\Python_Files\\main_window.py
