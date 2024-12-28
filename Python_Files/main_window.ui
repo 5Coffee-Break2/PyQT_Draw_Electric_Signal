@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>651</width>
+    <width>787</width>
     <height>582</height>
    </rect>
   </property>
@@ -37,7 +37,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>410</y>
+      <y>370</y>
       <width>111</width>
       <height>29</height>
      </rect>
@@ -55,8 +55,8 @@
    <widget class="QPushButton" name="select_Port_Btn">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>370</y>
+      <x>150</x>
+      <y>330</y>
       <width>136</width>
       <height>29</height>
      </rect>
@@ -76,7 +76,7 @@
      <rect>
       <x>19</x>
       <y>130</y>
-      <width>281</width>
+      <width>361</width>
       <height>180</height>
      </rect>
     </property>
@@ -97,11 +97,62 @@
    <widget class="QTableWidget" name="volt_time_Tabel">
     <property name="geometry">
      <rect>
-      <x>360</x>
+      <x>450</x>
       <y>30</y>
       <width>256</width>
       <height>401</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="save_Rx_Data_Btn">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>370</y>
+      <width>111</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>Save Rxed Data</string>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="data_rxed_prgBar">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>440</y>
+      <width>271</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="dispaly_Rx_Data_Btn">
+    <property name="geometry">
+     <rect>
+      <x>270</x>
+      <y>370</y>
+      <width>111</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>Display Curve</string>
     </property>
    </widget>
   </widget>
@@ -110,7 +161,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>651</width>
+     <width>787</width>
      <height>27</height>
     </rect>
    </property>

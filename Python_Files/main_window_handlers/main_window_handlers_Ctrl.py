@@ -2,7 +2,7 @@ import App_Serial_Port.serial_model as sm
 import global_modules as gm
 from PyQt6.QtWidgets import QListWidgetItem, QMainWindow
 from Draw_Electrical_signal_MApp import MainWindow,Ui_MainWindow
-#from Py_Window_Draw_signal_curve import mWindow
+import csv
 from icecream import ic
 RX_PERIOD = 500
 class Main_Wind_Handlers:
@@ -45,8 +45,8 @@ class Main_Wind_Handlers:
                         #@ start the thread
                         self.rx_Thread.start()    #@ self.Get_Received_Data() #gm.mwm.Pan_1_Main_window.read_Data_btn
 
-                    if self.thread_started :
-                        self.main_Wind_Ui.Pan_2_Mw.rx_tx_Data_TxtCtrl.AppendText("I'm still in the thread\n")
+                    #if self.thread_started :
+                    #    self.main_Wind_Ui.Pan_2_Mw.rx_tx_Data_TxtCtrl.AppendText("I'm still in the thread\n")
                 except:
                     
                     self.rx_Thread = gm.thrd.Thread(target=self.Get_Received_Data)
@@ -108,7 +108,10 @@ class Main_Wind_Handlers:
                     self.main_Wind.rx_Timer.start(RX_PERIOD)
         else:
             self.main_Wind_Ui.ser_Port_Info_LabCrl.setText("No port selected")
-            gm.QtWidgets.MessageBox("No port selected")
+            gm.QtWidgets.QMessageBox(parent=self.main_Wind,
+                                     icon=gm.QtWidgets.QMessageBox.Icon.Warning,
+                                     text="No port selected").show()
+            
     
     def onOpenPort_btn(self,btn_evt):
         """_summary_
@@ -126,7 +129,23 @@ class Main_Wind_Handlers:
        
        
     
-    def Get_Received_Data(self,disab_btn:gm.QtWidgets.QPushButton=None):
+    def Get_Received_Data(self, disab_btn: gm.QtWidgets.QPushButton = None):
+        #region
+        """
+        Handles the reception of data and updates the UI accordingly.
+        This method performs the following tasks:
+        1. Temporarily disables the event timer.
+        2. Updates the total bytes received.
+        3. Clears the contents of the voltage-time table.
+        4. Starts a worker thread to process the received data.
+        5. Iterates through the received voltage data and updates the table.
+        6. Updates the status bar with the current received data information.
+        7. Re-enables the "Get data" button after processing is complete.
+        8. Resets the received data count if all data has been read.
+        Args:
+            disab_btn (gm.QtWidgets.QPushButton, optional): The button to disable during data reception. Defaults to None.
+        """
+        #endregion
         #@ temporary dissable the event timer
    #-     self.main_Wind_Ui.rx_Timer.Stop()
         self.total_bytes_received += self.app_serPrt_model.Get_Rxed_Bytes_Count
@@ -134,26 +153,43 @@ class Main_Wind_Handlers:
         if self.app_serPrt_model.Get_All_Data() is not None:
             self.thread_started = True
             self.thread_finished = False
+            self.main_Wind_Ui.volt_time_Tabel.clearContents()
+            
+            
+            self.main_Wind_Ui.data_rxed_prgBar.setRange(0,self.app_serPrt_model.rx_Voltages_Array_Buff.size)
+            self.main_Wind.mW_Extra_Widgets.debug_label_DB1.setText(f"PROGRESS BAR RANGE : {self.main_Wind_Ui.data_rxed_prgBar.maximum()}")
+            
+            self.main_Wind.worker.total_val = self.app_serPrt_model.rx_Voltages_Array_Buff.size
+            self.main_Wind.statusBar_L3.setText(f"Total inc : {self.main_Wind.worker.total_val /100}")
+            self.main_Wind.thread.start()
+            self.main_Wind.thread.started.connect(self.main_Wind.worker.run)
+            
+            #@Start processing the received data here
             for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
+                self.main_Wind.worker.count = ind
+                #self.main_Wind.progress.setValue(ind)
                 #@ dissable the Get data button
                 if disab_btn is not None:
                     disab_btn.setEnabled(False)
                 try:
-                    #self.main_Wind_Ui.Pan_2_Mw.rx_tx_Data_TxtCtrl.AppendText(f"Volt = {vol_valu:.4}        Time = {self.app_serPrt_model.rx_Times_Array_Buff[ind]:.4}\n")
-                    
-                    #index =self.main_Wind_Ui.volt_LstVu.addItem(str(vol_valu))#Pan_2_Mw.data_lstBx.InsertItem(ind,str(vol_valu))
                     ##@ Add columns data to the list contro
-                    #self.main_Wind_Ui.time_LstVu.addItem(str(self.app_serPrt_model.rx_Times_Array_Buff[ind]))
+                    
                     self.main_Wind_Ui.volt_time_Tabel.insertRow(ind)
                     self.main_Wind_Ui.volt_time_Tabel.setItem(ind,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Array_Buff[ind])))
                     self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))   
                     #@ update the status bar with the current received data info
-                    #self.main_Wind_Ui.m_window_status_bar.SetStatusText(f"(Received count Time/ Volt : {self.app_serPrt_model.rx_Times_Array_Buff.size} / {self.app_serPrt_model.rx_Voltages_Array_Buff.size}",1)
+                    #self.main_Wind.statusBar().showMessage(f"(Received count Time/ Volt : {self.app_serPrt_model.rx_Times_Array_Buff.size} / {self.app_serPrt_model.rx_Voltages_Array_Buff.size}",1)
+                    self.main_Wind.statusBar_L1.setText(f"Items count : {self.main_Wind_Ui.volt_time_Tabel.rowCount()}")
                     #self.main_Wind_Ui.m_window_status_bar.SetStatusText(f"Items count : {self.main_Wind_Ui.Pan_2_Mw.data_lstBx.GetItemCount()}",2)
-                    
+                    if  ind ==  self.main_Wind.worker.total_val -1:
+                        self.main_Wind.worker.stop()
+                        #self.main_Wind_Ui.rx_Timer.stop()
+                        #self.main_Wind_Ui.rx_Timer.timeout.connect(self.onhandleFinished)
+                        #self.main_Wind_Ui.rx_Timer.start(RX_PERIOD)
+                        #self.main_Wind_Ui.rx_Timer.timeout.connect(self.onrxTimer) 
                 except IndexError:
-                    #self.main_Wind_Ui.m_window_status_bar.SetStatusText("Index Error"+(str(self.app_serPrt_model.Get_Rxed_Bytes_Count)),0)
-                  raise IndexError("Index Error")
+                    self.main_Wind.statusBar().showMessage("Index Error"+(str(self.app_serPrt_model.Get_Rxed_Bytes_Count)))
+                  
             #@ after data received finished re-enabel the Get received data button
             if disab_btn is not None:
                  disab_btn.setEnabled(True)
@@ -165,6 +201,7 @@ class Main_Wind_Handlers:
             self.total_bytes_received = 0
             #@ reset the received data count to be ready for the next data receiving if  we replaceed the 1 with zero the thread will not start again
             self.receved_numbers_count = 1
+            #self.main_Wind.Setup_Matplot_Widget()
             
        #else:
        #    self.Get_Received_Data()
@@ -200,8 +237,17 @@ class Main_Wind_Handlers:
             
              
     def onReceiveData(self,evt_btn):
-        ic(type(evt_btn))
-        ic (self.rx_Thread.is_alive())
+        raise NotImplementedError("This method is not implemented yet")
+        # if self.main_Wind.thread.isRunning():
+        #    self.main_Wind.worker.stop()
+        # else:
+        #    self.main_Wind_Ui.read_Rx_Data_Btn.setText('Stop')
+        #    self.main_Wind.thread.start()
+        #    self.main_Wind.thread.started.connect(self.main_Wind.worker.run)
+
+       
+       #ic(type(evt_btn))
+       #ic (self.rx_Thread.is_alive())
         #-if self.app_serPrt_model.Get_Rxed_Bytes_Count:
         #-    self.rx_Thread.start()#self.Get_Received_Data(evt_btn)    
         #-    #self.rx_Thread.join()
@@ -210,13 +256,53 @@ class Main_Wind_Handlers:
          #@ clear the listbox control befor adding the new data
             self.main_Wind_Ui.ser_ports_LstVu.clear()
                
+    def onSaveData(self,evt_btn):
+        """_summary_
+            Event handler for Save received data button
+        Args:
+            evt_btn (_type_: CommandEvent): _description_: event argument
+        """
+        # filename, _ = gm.QtWidgets.QFileDialog.getSaveFileName(self, "Save Page As", 
+                                                            #    filter="CSV File (*.csv)|All files (*.*)")
+        # if filename:
+            # writer = csv.writer(filename)
+            # writer.writerow(["Time","Voltage"])
+            # writer.writerows([self.app_serPrt_model.rx_Times_Array_Buff,self.app_serPrt_model.rx_Voltages_Array_Buff])
+            # #for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
+            # #    writer.writerow([self.app_serPrt_model.rx_Times_Array_Buff[ind],vol_valu])
+            # ic("Data saved")
+            # gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
+                                                              
+                                                                 
+                
+        
+        with open("Voly_Time_response.csv","w") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Time","Voltage"])
+            for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
+                writer.writerow([self.app_serPrt_model.rx_Times_Array_Buff[ind],vol_valu])
+        ic("Data saved")
+        gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
+        
+        
+    def onhandleFinished(self):
+        ic("Thread finished")
+        self.thread_finished = True
+        self.thread_started = False
+        self.total_bytes_received = 0
+        self.receved_numbers_count = 1
+        self.main_Wind_Ui.rx_Timer.start(RX_PERIOD)
+        #self.rx_Thread.start()#self.Get_Received_Data(evt_btn)    
+        #self.rx_Thread.join()    
         
         
         
-        
-        
-        
-        
+    def onDisplayCurve(self,evt_btn):
+        """_summary_
+            Event handler for Display Curve button
+        """
+        self.main_Wind.Setup_Matplot_Widget()
+           
         
         
         
