@@ -2,7 +2,8 @@ from main_window import Ui_MainWindow
 from PyQt6.QtWidgets import QMainWindow, QApplication, QProgressBar,QLabel
 from PyQt6.QtCore import Qt,QTimer, QThread
 import main_window_handlers.main_window_handlers_Ctrl as mwh
-from Progress_Bar_Thread.rx_progress_bar import Worker
+from Progress_Bar_Thread.rx_progress_bar import progreeBar_Woker
+
 #from Matplot_Files.pyqt_matplot_canva import MplCanvas
 from Matplot_Files.Matplot_Window import Matplot_Window
 from main_window_extra_widgets import MainWindowExtraWidgets
@@ -19,54 +20,65 @@ class MainWindow(QMainWindow):
         self.ma_Window.ser_Port_Info_LabCrl.setStyleSheet("font-size: 13px;color: #000;")
         self.Setup_StatusBar()
         self.statusBar().showMessage("Ready")
+        #@ Serial communication thread
+        #self.ser_thread = QThread(self)
+        #self.ser_progreeBar_Woker = pyqt_ser_comm_thread.Ser_progreeBar_Woker(self.ma_Window_Handlers.app_serPrt_model,self.ma_Window_Handlers.onDisplayCurve,1000)  
+        #self.ser_progreeBar_Woker.moveToThread(self.ser_thread)
         #@ progress bar thread
-        #self.progress = QProgressBar()
-       #
-        #self.progress.setGeometry(20,500,500,60)
-        #self.layout().addWidget(self.progress)
-        #self.progress.move(20,250)
-        self.thread = QThread(self)
-        self.worker = Worker(1000)
-        self.worker.moveToThread(self.thread)
-        self.worker.finished.connect(self.oNhandleFinished)
-        self.worker.progressChanged.connect(self.onProgressBar)#(self.progress.setValue)
-        #self.thread.start()
-        #self.thread.started.connect(self.worker.run)
+        self.progress_Bar_Thread = QThread(self)
+        self.progreeBar_Woker = progreeBar_Woker(1000)
+        self.progreeBar_Woker.moveToThread(self.progress_Bar_Thread)
+        self.progreeBar_Woker.finished.connect(self.oNhandleFinished)
+        self.progreeBar_Woker.progressChanged.connect(self.onProgressBar)#(self.progress.setValue)
+        #self.progress_Bar_Thread.start()
+        #self.progress_Bar_Thread.started.connect(self.progreeBar_Woker.run)
         css = """
     QMainWindow {
-        background-color: #fff0f000;
+        background-color:rgba(34, 34, 200, 0.63);
     }
     QLabel {
         font-size: 14px;
         color: #000;
-        background-color: #fff0f0bb;
+        background-color:rgba(133, 87, 219, 0.73);
         
     }
     QPushButton {
-        background-color: #f0f0f0;
+        background-color:rgba(198, 104, 41, 0.87);
         border-radius: 5px;
         border: 1px solid #000;
     }
     QPushButton:hover {
-        background-color: #f0f;
+        background-color:  #f0f;
     }
 
+    QListWidget {
+        background-color:rgba(55, 80, 239, 0.46);
+        border-radius: 5px;
+        border: 1px solid #000;
+    }
+    
     QListWidget::item {
         
         border-radius: 2px;
         border: 1px solid #000;
         selection-color: #ff0000;
+        background-color:rgba(133, 87, 219, 0.73);
     }
     QListWidget::item::selected {
         
         border-radius: 2px;
         border: 1px solid #ff0000;
-        selection-color: #f0a;
+        selection-color: #00fb00;
         selection-background-color: #00ff00;
         
     }
     QListWidget::item:hover {  
-        background-color: #f0f0f0;
+        background-color:rgba(55, 80, 239, 0.46);
+        border-radius: 5px;
+        border: 1px solid #000;
+    }
+    QTableWidget {  
+        background-color:rgba(55, 80, 239, 0.46);
         border-radius: 5px;
         border: 1px solid #000;
     }
@@ -127,9 +139,10 @@ class MainWindow(QMainWindow):
         self.rx_Timer.timeout.connect(self.ma_Window_Handlers.onrxTimer)
         self.ma_Window.save_Rx_Data_Btn.clicked.connect(self.ma_Window_Handlers.onSaveData)
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
+    
     def oNhandleFinished(self):
         self.ma_Window.read_Rx_Data_Btn.setText('Start')
-        self.thread.quit()
+        self.progress_Bar_Thread.quit()
     
     def Widget_Styles(self):
         """

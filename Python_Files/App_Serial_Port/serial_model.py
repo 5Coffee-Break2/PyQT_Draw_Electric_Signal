@@ -4,7 +4,7 @@ import Py_AVR_USART_Lib_Wind as pyAvrSer
 from wx import MessageBox,CallAfter,Frame       
 import numpy as np
 #import data_figure_mod as dfm                
-import App_Serial_Port.Serial_Comms_Events as sce
+
      
 clear_Rx_Tx_buffer_flag = False
 draw_Me = False 
@@ -33,8 +33,8 @@ class Serial_Model:
         
         self.Eror_Evt_Member = evnt_memb
         self.Eror_Event_Handler = evt_hndl
-        self.rxed_Error_Event =sce.Data_Received_Event(self.Eror_Evt_Member)
-        #self.rxed_Error_Event.Register_4Serial_Event(sce.EVT_Data_RxED_ERROR_EVTYPE,self.Eror_Event_Handler)
+       
+       
         
         #_____________________________ End of Error Events Section ________________________________#
         
@@ -73,7 +73,7 @@ class Serial_Model:
         except TypeError as e :
             #MessageBox(f"{e.__doc__}: {e.args[0]} -> {self.__active_Serial_Port__.Get_Rx_Waiting_count})")
             #@ Fire Data RXed with Error Event 
-            self.rxed_Error_Event.Fire_SCom_Event(self.Eror_Evt_Member,f"{e.__doc__}: {e.args[0]} -> {self.__active_Serial_Port__.Get_Rx_Waiting_count})")
+        
            #- print(f"{e.__doc__}: {e.args[0]} -> {self.__active_Serial_Port__.Get_Rx_Waiting_count})")
             return
             

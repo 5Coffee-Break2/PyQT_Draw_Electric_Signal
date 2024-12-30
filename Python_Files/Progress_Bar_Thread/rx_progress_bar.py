@@ -1,12 +1,12 @@
 # from PySide2 import QtCore, QtWidgets
 #
-# class Worker(QtCore.QObject):
+# class progreeBar_Woker(QtCore.QObject):
 #     progressChanged = QtCore.Signal(int)
 #     finished = QtCore.Signal()
 
 from PyQt6 import QtCore, QtWidgets
 
-class Worker(QtCore.QObject):
+class progreeBar_Woker(QtCore.QObject):
     progressChanged = QtCore.pyqtSignal(int)
     finished = QtCore.pyqtSignal()
 
@@ -23,7 +23,7 @@ class Worker(QtCore.QObject):
     
         while self.count < self.total_val and not self._stopped:  #
             #count += increment
-            increment += increment
+            #increment += increment
             self.progressChanged.emit(self.count)
             #if increment >= 100:
             #    self._stopped=True

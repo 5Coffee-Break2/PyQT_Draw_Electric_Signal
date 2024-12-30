@@ -8,7 +8,11 @@ class MainWindowExtraWidgets:
     
     def create_widgets(self):
         self.debug_label_DB1 = gm.QtWidgets.QLabel(self.parent, text="This is a Debug label 1")
-        
+        #self.progress = QProgressBar()
+       #
+        #self.progress.setGeometry(20,500,500,60)
+        #self.layout().addWidget(self.progress)
+        #self.progress.move(20,250)
     
     def place_widgets(self):
         self.debug_label_DB1.setGeometry(20,450,400,30)
