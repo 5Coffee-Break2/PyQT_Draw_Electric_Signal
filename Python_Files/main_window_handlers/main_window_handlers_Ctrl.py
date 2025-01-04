@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QListWidgetItem, QMainWindow
 from PyQt6.QtCore import QThread
 from Draw_Electrical_signal_MApp import MainWindow,Ui_MainWindow
 from App_Serial_Port import pyqt_ser_comm_thread
+from Progress_Bar_Thread.rx_progress_bar import CProgess_Bar_Thread
 import csv
 from icecream import ic
 RX_PERIOD = 500
@@ -15,70 +16,63 @@ class Main_Wind_Handlers:
         self.main_Wind_Ui = client.ma_Window
         self.app_serPrt_model = sm.Serial_Model(self.main_Wind_Ui,self.onRx_TxSerial)
         self.ser_port_name = None
-        #self.rx_Thread = gm.thrd.Thread(target=self.Get_Received_Data)
-        #-self.thread_Is_Alive:bool=False
-        #-self.all_data_received:bool = False
-        #-self.thread_started:bool = False
-        #-self.thread_finished:bool = False
-        #-self.total_bytes_received:int=0
-        #-self.sc_thrd = gm.sthd.Serial_Comm_Thread(self.app_serPrt_model,self.Display_Received_Data)
-        #-self.sc_thrd.start()
         
-         #@ PyQt Serial communication thread
+       #@ PyQt Serial communication thread
         self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
-        self.receved_numbers_count:int = 1
-         
-    def inside_thread(self):
-        self.c+=1
-        ic("From inside the serial thread",self.c)
-       
+        self.receved_Bytes_count:int = 1
+     
     def onrxTimer(self):
         """_summary_
         This function to check periodically(time period = RX_CHECK_EVERY) if there's a received data in the rx serial buffeer
         this version of the function will executed only if there was a received data in the buffer and no other data will be received
             tim_evt (_type_): _description_
         """
-        ic("Event timer started")
+       
+        ic("Timer event started")
         #@ if there's a received data in the buffer
         if self.app_serPrt_model.Get_Rxed_Bytes_Count: 
             #@ if received data in the buffer is completed and no other data will be received
-            if self.receved_numbers_count == self.app_serPrt_model.Get_Rxed_Bytes_Count  :
+            if self.receved_Bytes_count == self.app_serPrt_model.Get_Rxed_Bytes_Count  :
                 try:
-                    #@ if thread didn't start yet
+                    
+                    self.main_Wind.statusBar_L2.setText(f"Progress: ")
+                    self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count :")
+                    #@Reset the progress var value
+                    self.main_Wind_Ui.data_rxed_prgBar.setValue(0)
+                    
+                    #@ if thread didn't start yet creat anew one and start it
                     if not self.pyqt_ser_thread.isRunning(): #if not self.ser_thread.isRunning() :
-                        ic("All data has received Trying to start thread")
                         #@ start the thread
                         self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
-                        self.pyqt_ser_thread.total_counts = self.receved_numbers_count
+                        self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
                         self.pyqt_ser_thread.ser_Comm_Started_EVT.connect(self.onSer_Thread_Started)
                         self.pyqt_ser_thread.ser_Comm_End_EVT.connect(self.onSer_Thread_Finished)
                         self.pyqt_ser_thread.start()
                         #Below statment has been moved to serial communiation thread stop or end event
-                        #@ if all data was read and there's no received data in the buffer   
-                        #self.receved_numbers_count=1
+                       
                         
-                    #-if not self.rx_Thread.is_alive():
-                    #-    #@ start the thread
-                    #-    self.rx_Thread.start()    #@ self.Get_Received_Data() #gm.mwm.Pan_1_Main_window.read_Data_btn
-
+                   
                   
                 except:
                     ic("Error in starting thread I'm executing exception routine")
-                    self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
-                    self.pyqt_ser_thread.total_counts = self.receved_numbers_count
-                    self.pyqt_ser_thread.ser_Comm_Started_EVT.connect(self.onSer_Thread_Started)
-                    self.pyqt_ser_thread.ser_Comm_End_EVT.connect(self.onSer_Thread_Finished)
-                    self.pyqt_ser_thread.start()
-                    #-self.rx_Thread = gm.thrd.Thread(target=self.Get_Received_Data)
-                    #-self.rx_Thread.start()
-                #-self.main_Wind_Ui.rx_Timer.Start(gm.mwm.RX_CHECK_EVERY)
+                #_    self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
+                #_    self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
+                #_    self.pyqt_ser_thread.ser_Comm_Started_EVT.connect(self.onSer_Thread_Started)
+                #_    self.pyqt_ser_thread.ser_Comm_End_EVT.connect(self.onSer_Thread_Finished)
+                #_    self.pyqt_ser_thread.start()
+                #_    #-self.rx_Thread = gm.thrd.Thread(target=self.Get_Received_Data)
+                #_    #-self.rx_Thread.start()
+                #_#-self.main_Wind_Ui.rx_Timer.Start(gm.mwm.RX_CHECK_EVERY)
                 
             #@ if receiving data is in progess and not finished yet
             else:
                 #@ update the received data count with the last data size that received
-                self.receved_numbers_count = self.app_serPrt_model.Get_Rxed_Bytes_Count
-                ic("Updating Total received data count",self.receved_numbers_count )
-        ic("Evwnt timer ended No data received")   
+                self.receved_Bytes_count = self.app_serPrt_model.Get_Rxed_Bytes_Count
+                self.main_Wind.statusBar_L3.setText(f"Rxed Bytes Count: {self.receved_Bytes_count}" )
+        
+        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
+        ic("Timer event finished")
+       
              
     def onSer_Thread_Started(self,evt_ob):
        #@ stop the event timer
@@ -89,7 +83,7 @@ class Main_Wind_Handlers:
         ic("Thread finished")
         ic(type(evt_ob),evt_ob)
         #@ if all data was read and there's no received data in the buffer  
-        self.receved_numbers_count=1
+        self.receved_Bytes_count=1
         #@ start the event timer to check if there's a received data in the buffer
         self.main_Wind.rx_Timer.start(RX_PERIOD)                       
     
@@ -156,8 +150,7 @@ class Main_Wind_Handlers:
                 self.App_Serial_Port= self.app_serPrt_model.Get_Active_Port()
                 self.main_Wind_Ui.ser_Port_Info_LabCrl.setText(self.app_serPrt_model.Get_Active_Port_info())
                 self.main_Wind.rx_Timer.start()
-       
-       
+    
     
     def Get_Received_Data(self, disab_btn: gm.QtWidgets.QPushButton = None):
         #region
@@ -175,6 +168,8 @@ class Main_Wind_Handlers:
         Args:
             disab_btn (gm.QtWidgets.QPushButton, optional): The button to disable during data reception. Defaults to None.
         """
+        
+        #@@@@@@@@@@ This function needs an update for the code to work well since it has been replaced by  Display_Received_Data function  @@@@@@@@@@@@@@@
         #endregion
         #@ temporary dissable the event timer
    #-     self.main_Wind_Ui.rx_Timer.Stop()
@@ -191,7 +186,7 @@ class Main_Wind_Handlers:
             
             self.main_Wind.progreeBar_Woker.total_val = self.app_serPrt_model.rx_Voltages_Array_Buff.size
             self.main_Wind.statusBar_L3.setText(f"Total inc : {self.main_Wind.progreeBar_Woker.total_val /100}")
-            self.main_Wind.progress_Bar_Thread.start()
+            #self.main_Wind.progress_Bar_Thread.start()
             self.main_Wind.progress_Bar_Thread.started.connect(self.main_Wind.progreeBar_Woker.run)
             
             #@Start processing the received data here
@@ -209,7 +204,7 @@ class Main_Wind_Handlers:
                     self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))   
                     #@ update the status bar with the current received data info
                     #self.main_Wind.statusBar().showMessage(f"(Received count Time/ Volt : {self.app_serPrt_model.rx_Times_Array_Buff.size} / {self.app_serPrt_model.rx_Voltages_Array_Buff.size}",1)
-                    self.main_Wind.statusBar_L1.setText(f"Items count : {self.main_Wind_Ui.volt_time_Tabel.rowCount()}")
+                    #self.main_Wind.statusBar_L1.setText(f"Items count : {self.main_Wind_Ui.volt_time_Tabel.rowCount()}")
                     #self.main_Wind_Ui.m_window_status_bar.SetStatusText(f"Items count : {self.main_Wind_Ui.Pan_2_Mw.data_lstBx.GetItemCount()}",2)
                     if  ind ==  self.main_Wind.progreeBar_Woker.total_val -1:
                         self.main_Wind.progreeBar_Woker.stop()
@@ -230,47 +225,46 @@ class Main_Wind_Handlers:
             self.thread_started = False
             self.total_bytes_received = 0
             #@ reset the received data count to be ready for the next data receiving if  we replaceed the 1 with zero the thread will not start again
-            self.receved_numbers_count = 1
+            self.receved_Bytes_count = 1
             #self.main_Wind.Setup_Matplot_Widget()
             
        #else:
        #    self.Get_Received_Data()
-          
+    def Update_Progess_Bar_Value(self,val ):
+            self.main_Wind_Ui.data_rxed_prgBar.setValue(val)
+            self.main_Wind.statusBar_L2.setText(f"Progress: {val}")
+    
     def Display_Received_Data(self):
-        ic(type(self.Display_Received_Data))
-        
+        #ic(type(self.Display_Received_Data))
+        total_numbers_Received = self.app_serPrt_model.rx_Voltages_Array_Buff.size
+        #-max_index_value = total_numbers_Received -1
+        #----self.main_Wind.progress_Bar_Thread.start()
+        #-self.Prog_Bar_Thread_2= CProgess_Bar_Thread(self.main_Wind,self.app_serPrt_model.rx_Voltages_Array_Buff.size,self.Update_Progess_Bar_Value,self.main_Wind_Ui.data_rxed_prgBar)
+        #-self.Prog_Bar_Thread_2.start()
+        #@ below Moved to the timer rx event
         self.main_Wind_Ui.volt_time_Tabel.clearContents()
-        
-        self.main_Wind.progreeBar_Woker.total_val = self.app_serPrt_model.rx_Voltages_Array_Buff.size
-        self.main_Wind_Ui.data_rxed_prgBar.setRange(0,self.main_Wind.progreeBar_Woker.total_val-1)
-        self.main_Wind.statusBar_L3.setText(f"Total inc : {self.main_Wind.progreeBar_Woker.total_val /100}")
-        self.main_Wind.progress_Bar_Thread.started.connect(self.main_Wind.progreeBar_Woker.run)
-        self.main_Wind.progress_Bar_Thread.start()
-        self.main_Wind.mW_Extra_Widgets.debug_label_DB1.setText(f"PROGRESS BAR RANGE : {self.main_Wind_Ui.data_rxed_prgBar.maximum()}")
-        self.main_Wind_Ui.volt_time_Tabel.setRowCount(self.receved_numbers_count)
-        #@Start processing the received data here
+        self.main_Wind_Ui.volt_time_Tabel.setRowCount(total_numbers_Received)
+        #@Set the progress bar
+        self.main_Wind_Ui.data_rxed_prgBar.setRange(0,(total_numbers_Received))
+        #@ Update the statusbar with the total received data count
+        self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count : {total_numbers_Received} * 2 = {total_numbers_Received * 2} ")
         for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
-            self.main_Wind.progreeBar_Woker.count = ind
-           
-            #@ dissable the Get data button
-            #if disab_btn is not None:
-            #    disab_btn.setEnabled(False)
             try:
+               
+                #@ dissable the Get data button
+                #if disab_btn is not None:
+                #    disab_btn.setEnabled(False)
                 ##@ Add columns data to the list contro
                 
-                #self.main_Wind_Ui.volt_time_Tabel.insertRow(ind)
                 self.main_Wind_Ui.volt_time_Tabel.setItem(ind,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Array_Buff[ind])))
                 self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))   
-                #@ update the status bar with the current received data info
-                #self.main_Wind.statusBar().showMessage(f"(Received count Time/ Volt : {self.app_serPrt_model.rx_Times_Array_Buff.size} / {self.app_serPrt_model.rx_Voltages_Array_Buff.size}",1)
-                self.main_Wind.statusBar_L1.setText(f"Items count : {self.main_Wind_Ui.volt_time_Tabel.rowCount()}")
-                #self.main_Wind_Ui.m_window_status_bar.SetStatusText(f"Items count : {self.main_Wind_Ui.Pan_2_Mw.data_lstBx.GetItemCount()}",2)
-                if  ind ==  self.main_Wind.progreeBar_Woker.total_val -1:
-                    self.main_Wind.progreeBar_Woker.stop()
-                    #self.main_Wind_Ui.rx_Timer.stop()
-                    #self.main_Wind_Ui.rx_Timer.timeout.connect(self.onhandleFinished)
-                    #self.main_Wind_Ui.rx_Timer.start(RX_PERIOD)
-                    #self.main_Wind_Ui.rx_Timer.timeout.connect(self.onrxTimer) 
+                
+                #@updat the progess bar value
+                #-self.Prog_Bar_Thread_2.count = ind
+                self.main_Wind_Ui.data_rxed_prgBar.setValue(ind+1)
+                
+               
+                
             except IndexError:
                 self.main_Wind.statusBar().showMessage("Index Error"+(str(self.app_serPrt_model.Get_Rxed_Bytes_Count)))
                 
@@ -278,16 +272,11 @@ class Main_Wind_Handlers:
         #if disab_btn is not None:
         #     disab_btn.setEnabled(True)
         #
-        #@ after data received finished re-enabel the Get received data button
-           
-       
-         #@ if all data was read and there's no received data in the buffer        
-        if self.app_serPrt_model.Get_Rxed_Bytes_Count == 0:
-            self.thread_finished = True
-            self.thread_started = False
-            self.total_bytes_received = 0
-            #@ reset the received data count to be ready for the next data receiving if  we replaceed the 1 with zero the thread will not start again
-            self.receved_numbers_count = 1
+        #@ after data received finished 
+        self.receved_Bytes_count = 1   
+        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
+        
+        
        
              
     def onReceiveData(self,evt_btn):
@@ -326,10 +315,7 @@ class Main_Wind_Handlers:
             # #    writer.writerow([self.app_serPrt_model.rx_Times_Array_Buff[ind],vol_valu])
             # ic("Data saved")
             # gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
-                                                              
-                                                                 
-                
-        
+
         with open("Voly_Time_response.csv","w") as file:
             writer = csv.writer(file)
             writer.writerow(["Time","Voltage"])
@@ -337,20 +323,17 @@ class Main_Wind_Handlers:
                 writer.writerow([self.app_serPrt_model.rx_Times_Array_Buff[ind],vol_valu])
         ic("Data saved")
         gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
-        
-        
+
     def onhandleFinished(self):
         ic("Thread finished")
         self.thread_finished = True
         self.thread_started = False
         self.total_bytes_received = 0
-        self.receved_numbers_count = 1
+        self.receved_Bytes_count = 1
         self.main_Wind_Ui.rx_Timer.start(RX_PERIOD)
         #self.rx_Thread.start()#self.Get_Received_Data(evt_btn)    
         #self.rx_Thread.join()    
-        
-        
-        
+
     def onDisplayCurve(self,evt_btn):
         """_summary_
             Event handler for Display Curve button

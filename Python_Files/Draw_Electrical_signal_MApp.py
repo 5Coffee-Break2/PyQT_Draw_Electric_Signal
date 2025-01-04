@@ -2,7 +2,8 @@ from main_window import Ui_MainWindow
 from PyQt6.QtWidgets import QMainWindow, QApplication, QProgressBar,QLabel
 from PyQt6.QtCore import Qt,QTimer, QThread
 import main_window_handlers.main_window_handlers_Ctrl as mwh
-from Progress_Bar_Thread.rx_progress_bar import progreeBar_Woker
+#from Progress_Bar_Thread.rx_progress_bar import progreeBar_Woker
+from Progress_Bar_Thread.rx_progress_bar import CProgess_Bar_Thread
 
 #from Matplot_Files.pyqt_matplot_canva import MplCanvas
 from Matplot_Files.Matplot_Window import Matplot_Window
@@ -21,17 +22,10 @@ class MainWindow(QMainWindow):
         self.Setup_StatusBar()
         self.statusBar().showMessage("Ready")
         #@ Serial communication thread
-        #self.ser_thread = QThread(self)
-        #self.ser_progreeBar_Woker = pyqt_ser_comm_thread.Ser_progreeBar_Woker(self.ma_Window_Handlers.app_serPrt_model,self.ma_Window_Handlers.onDisplayCurve,1000)  
-        #self.ser_progreeBar_Woker.moveToThread(self.ser_thread)
+       
         #@ progress bar thread
-        self.progress_Bar_Thread = QThread(self)
-        self.progreeBar_Woker = progreeBar_Woker(1000)
-        self.progreeBar_Woker.moveToThread(self.progress_Bar_Thread)
-        self.progreeBar_Woker.finished.connect(self.oNhandleFinished)
-        self.progreeBar_Woker.progressChanged.connect(self.onProgressBar)#(self.progress.setValue)
-        #self.progress_Bar_Thread.start()
-        #self.progress_Bar_Thread.started.connect(self.progreeBar_Woker.run)
+        self.PBar_val = 0
+        
         css = """
     QMainWindow {
         background-color:rgba(34, 34, 200, 0.63);
@@ -90,8 +84,10 @@ class MainWindow(QMainWindow):
         self.Events_Handlers()
     
     def onProgressBar(self,pval):
-        self.ma_Window.data_rxed_prgBar.setValue(pval)
-        self.statusBar_L2.setText(f"Progress: {pval}%") 
+        #self.ma_Window.data_rxed_prgBar.setValue(pval)
+        self.statusBar_L2.setText(f"Progress: {pval}") 
+        print(f"Progress: {pval}")
+        assert isinstance(pval, int)
     
     def Setup_Matplot_Widget(self):
         """
@@ -127,19 +123,20 @@ class MainWindow(QMainWindow):
         self.statusBar_L2=QLabel(self)
         self.statusBar_L3=QLabel(self)
          
-        self.statusBar().addPermanentWidget(self.statusBar_L1)
-        self.statusBar().addPermanentWidget(self.statusBar_L2,2)
-        self.statusBar().addPermanentWidget(self.statusBar_L3,2)
+        self.statusBar().addPermanentWidget(self.statusBar_L1,stretch=1)
+        self.statusBar().addPermanentWidget(self.statusBar_L2,1)
+        self.statusBar().addPermanentWidget(self.statusBar_L3,1)
         #self.statusBar().showMessage("Ready")    
     
     def Events_Handlers(self):
         self.ma_Window.get_Sys_portsBtn.clicked.connect(self.ma_Window_Handlers.onlist_Sys_Ports_btn)  
+        self.ma_Window.ser_ports_LstVu.doubleClicked.connect(self.ma_Window_Handlers.onSelectPort)
         self.ma_Window.select_Port_Btn.clicked.connect(self.ma_Window_Handlers.onSelectPort)
         self.ma_Window.read_Rx_Data_Btn.clicked.connect(self.ma_Window_Handlers.onReceiveData)
         self.rx_Timer.timeout.connect(self.ma_Window_Handlers.onrxTimer)
         self.ma_Window.save_Rx_Data_Btn.clicked.connect(self.ma_Window_Handlers.onSaveData)
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
-    
+        self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
     def oNhandleFinished(self):
         self.ma_Window.read_Rx_Data_Btn.setText('Start')
         self.progress_Bar_Thread.quit()
@@ -156,7 +153,11 @@ class MainWindow(QMainWindow):
         #self.ma_Window.label_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         #self.ma_Window.label.styleSheet = "font-weigt:bold ;color: #000;"
         #self.ma_Window.label_2.styleSheet = "font-weigt:bold ;color: #000;"
-            
+    def onCloseGraphBtn(self,evt):
+         
+         self.mpl_widget .destroy(True)
+         self.mpl_widget .close()   
+         
 if __name__ == "__main__":
     mApp = QApplication([])
     MainWindow = MainWindow()
