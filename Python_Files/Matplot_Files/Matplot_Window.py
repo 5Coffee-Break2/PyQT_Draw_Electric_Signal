@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QMainWindow, QApplication
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 from Matplot_Files.pyqt_matplot_canva import MplCanvas
+from matplotlib.backends.backend_qtagg import (NavigationToolbar2QT as NavigationToolbar)
 from icecream import ic
 class Matplot_Window(QtWidgets.QDialog):
     def __init__(self,parent):
@@ -11,6 +12,8 @@ class Matplot_Window(QtWidgets.QDialog):
         self.verticalLayout = QtWidgets.QVBoxLayout(self)
         self.verticalLayout.setObjectName("verticalLayout")
         self.mpl_widget = MplCanvas(self, width=5, height=4, dpi=100)
+        self.toolbar = NavigationToolbar(self.mpl_widget, self)
+        self.verticalLayout.addWidget(self.toolbar)
         self.verticalLayout.addWidget(self.mpl_widget)
         self.setLayout(self.verticalLayout)
         

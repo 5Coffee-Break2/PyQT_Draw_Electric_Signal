@@ -28,7 +28,7 @@ class Main_Wind_Handlers:
             tim_evt (_type_): _description_
         """
        
-        ic("Timer event started")
+       #_ ic("Timer event started")
         #@ if there's a received data in the buffer
         if self.app_serPrt_model.Get_Rxed_Bytes_Count: 
             #@ if received data in the buffer is completed and no other data will be received
@@ -70,8 +70,8 @@ class Main_Wind_Handlers:
                 self.receved_Bytes_count = self.app_serPrt_model.Get_Rxed_Bytes_Count
                 self.main_Wind.statusBar_L3.setText(f"Rxed Bytes Count: {self.receved_Bytes_count}" )
         
-        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
-        ic("Timer event finished")
+        #@_ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
+        #@_ic("Timer event finished")
        
              
     def onSer_Thread_Started(self,evt_ob):

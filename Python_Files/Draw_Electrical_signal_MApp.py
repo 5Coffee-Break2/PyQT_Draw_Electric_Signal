@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
     }
     QLabel {
         font-size: 14px;
-        color: #000;
+        color: rgba(255, 180, 239, 0.86);;
         background-color:rgba(133, 87, 219, 0.73);
         
     }
@@ -137,6 +137,7 @@ class MainWindow(QMainWindow):
         self.ma_Window.save_Rx_Data_Btn.clicked.connect(self.ma_Window_Handlers.onSaveData)
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
         self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
+    
     def oNhandleFinished(self):
         self.ma_Window.read_Rx_Data_Btn.setText('Start')
         self.progress_Bar_Thread.quit()
