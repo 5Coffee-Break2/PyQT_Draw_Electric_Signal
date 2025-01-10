@@ -12,6 +12,7 @@ class Ser_PyQt_Thread(QtCore.QThread):
         self.total_counts = 0
         self.thrd_ser_prt = ser_prt
         self.Run_this_fn = fn_to_run
+        #self.thrd_ser_prt.serial_Events.number_Received_pyqt_Event.connect(self.data_Rxed)
     
     def run(self):
         ic ("pyqt serial thread is running")
@@ -32,3 +33,6 @@ class Ser_PyQt_Thread(QtCore.QThread):
 
     def stop(self):
         self._stopped = True
+        
+    #def data_Rxed(self,evt):
+    #    ic(evt)

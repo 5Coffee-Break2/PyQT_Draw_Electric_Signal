@@ -83,11 +83,11 @@ class MainWindow(QMainWindow):
         
         self.Events_Handlers()
     
-    def onProgressBar(self,pval):
-        #self.ma_Window.data_rxed_prgBar.setValue(pval)
-        self.statusBar_L2.setText(f"Progress: {pval}") 
-        print(f"Progress: {pval}")
-        assert isinstance(pval, int)
+    # def onProgressBar(self,pval):
+        # #self.ma_Window.data_rxed_prgBar.setValue(pval)
+        # self.statusBar_L2.setText(f"Progress: {pval}") 
+        # print(f"Progress: {pval}")
+        # assert isinstance(pval, int)
     
     def Setup_Matplot_Widget(self):
         """
@@ -96,7 +96,10 @@ class MainWindow(QMainWindow):
         This method creates a Matplotlib widget and sets it as the central widget
         of the main window.
         """
+        # from matplotlib.widgets import Cursor
+     
         self.mpl_widget = Matplot_Window(self)#MplCanvas(self, width=5, height=4, dpi=100)
+        # cursor = Cursor(  self.mpl_widget.mpl_widget.axes, useblit=True, color='red', linewidth=2)
         #self.layout().addWidget(self.mpl_widget)
         #self.ma_Window.volt_time_Tabel.setCellWidget(0,0,self.mpl_widget)
         
@@ -104,7 +107,9 @@ class MainWindow(QMainWindow):
         self.mpl_widget.mpl_widget.axes.set_xlabel("Time")
         self.mpl_widget.mpl_widget.axes.set_ylabel("Voltage")
         self.mpl_widget.mpl_widget.axes.set_title("Capcitor Charging Curve")
-        self.mpl_widget.mpl_widget.axes.grid() 
+        self.mpl_widget.mpl_widget.axes.grid()
+        self.mpl_widget.mpl_widget.Setup_Cursor() 
+        
         #self.layout().addWidget(self.mpl_widget)
         
         #self.ma_Window. volt_time_Tabel.setCellWidget(0,0,self.mpl_widget)
@@ -136,7 +141,7 @@ class MainWindow(QMainWindow):
         self.rx_Timer.timeout.connect(self.ma_Window_Handlers.onrxTimer)
         self.ma_Window.save_Rx_Data_Btn.clicked.connect(self.ma_Window_Handlers.onSaveData)
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
-        self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
+        #self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
     
     def oNhandleFinished(self):
         self.ma_Window.read_Rx_Data_Btn.setText('Start')

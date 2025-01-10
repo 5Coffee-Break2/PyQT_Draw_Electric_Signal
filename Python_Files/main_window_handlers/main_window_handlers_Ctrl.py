@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QListWidgetItem, QMainWindow
 from PyQt6.QtCore import QThread
 from Draw_Electrical_signal_MApp import MainWindow,Ui_MainWindow
 from App_Serial_Port import pyqt_ser_comm_thread
-from Progress_Bar_Thread.rx_progress_bar import CProgess_Bar_Thread
+from Progress_Bar_Thread.rx_progress_bar import *#CProgess_Bar_Thread,Progress_Bar_Worker
 import csv
 from icecream import ic
 RX_PERIOD = 500
@@ -16,10 +16,16 @@ class Main_Wind_Handlers:
         self.main_Wind_Ui = client.ma_Window
         self.app_serPrt_model = sm.Serial_Model(self.main_Wind_Ui,self.onRx_TxSerial)
         self.ser_port_name = None
-        
+        #self.main_Wind_Ui.data_rxed_prgBar.setMaximum(2000)
+        self.app_serPrt_model.serial_Events.number_Received_pyqt_Event.connect(self.onNumber_Received)
        #@ PyQt Serial communication thread
         self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
         self.receved_Bytes_count:int = 1
+    
+    def onNumber_Received(self,num):
+        self.main_Wind_Ui.data_rxed_prgBar.setValue(num)
+        ic(num)
+        ic(self.main_Wind_Ui.data_rxed_prgBar.maximum())
      
     def onrxTimer(self):
         """_summary_
@@ -42,6 +48,8 @@ class Main_Wind_Handlers:
                     
                     #@ if thread didn't start yet creat anew one and start it
                     if not self.pyqt_ser_thread.isRunning(): #if not self.ser_thread.isRunning() :
+                        #@ approximation for the total received numbers count to set the progress bar max value (6.5and 31 values are estimated by experements)
+                        self.main_Wind_Ui.data_rxed_prgBar.setMaximum(int(self.receved_Bytes_count/6.4+31))
                         #@ start the thread
                         self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
                         self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
@@ -50,9 +58,6 @@ class Main_Wind_Handlers:
                         self.pyqt_ser_thread.start()
                         #Below statment has been moved to serial communiation thread stop or end event
                        
-                        
-                   
-                  
                 except:
                     ic("Error in starting thread I'm executing exception routine")
                 #_    self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
@@ -80,6 +85,7 @@ class Main_Wind_Handlers:
         ic(evt_ob)
         
     def onSer_Thread_Finished(self,evt_ob):
+     
         ic("Thread finished")
         ic(type(evt_ob),evt_ob)
         #@ if all data was read and there's no received data in the buffer  
@@ -230,9 +236,9 @@ class Main_Wind_Handlers:
             
        #else:
        #    self.Get_Received_Data()
-    def Update_Progess_Bar_Value(self,val ):
-            self.main_Wind_Ui.data_rxed_prgBar.setValue(val)
-            self.main_Wind.statusBar_L2.setText(f"Progress: {val}")
+    #-def Update_Progess_Bar_Value(self,val ):
+    #-        self.main_Wind_Ui.data_rxed_prgBar.setValue(val)
+    #-        self.main_Wind.statusBar_L2.setText(f"Progress: {val}")
     
     def Display_Received_Data(self):
         #ic(type(self.Display_Received_Data))
@@ -245,7 +251,11 @@ class Main_Wind_Handlers:
         self.main_Wind_Ui.volt_time_Tabel.clearContents()
         self.main_Wind_Ui.volt_time_Tabel.setRowCount(total_numbers_Received)
         #@Set the progress bar
-        self.main_Wind_Ui.data_rxed_prgBar.setRange(0,(total_numbers_Received))
+        prg_bar_thrd = Progress_Bar_Worker(total_numbers_Received,self.main_Wind_Ui.data_added_prgBar,None)
+        thread_pool = QThreadPool()
+        thread_pool.start(prg_bar_thrd)
+        #-self.main_Wind_Ui.data_rxed_prgBar.setRange(0,(total_numbers_Received))
+        
         #@ Update the statusbar with the total received data count
         self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count : {total_numbers_Received} * 2 = {total_numbers_Received * 2} ")
         for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
@@ -258,10 +268,11 @@ class Main_Wind_Handlers:
                 
                 self.main_Wind_Ui.volt_time_Tabel.setItem(ind,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Array_Buff[ind])))
                 self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))   
-                
+                #self.main_Wind_Ui.volt_time_Tabel.repaint( self.main_Wind_Ui.volt_time_Tabel.geometry())
                 #@updat the progess bar value
                 #-self.Prog_Bar_Thread_2.count = ind
-                self.main_Wind_Ui.data_rxed_prgBar.setValue(ind+1)
+                #--self.main_Wind_Ui.data_rxed_prgBar.setValue(ind+1)
+                prg_bar_thrd.cur_val=ind+1
                 
                
                 
@@ -274,8 +285,9 @@ class Main_Wind_Handlers:
         #
         #@ after data received finished 
         self.receved_Bytes_count = 1   
-        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
         
+        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
+        prg_bar_thrd.stop()
         
        
              
@@ -338,6 +350,7 @@ class Main_Wind_Handlers:
         """_summary_
             Event handler for Display Curve button
         """
+        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
         self.main_Wind.Setup_Matplot_Widget()
            
         

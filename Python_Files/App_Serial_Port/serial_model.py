@@ -3,6 +3,7 @@ import Py_AVR_USART_Lib_Wind as pyAvrSer
 #from time import sleep
 from wx import MessageBox,CallAfter,Frame       
 import numpy as np
+from PyQt6.QtCore import pyqtSignal,QObject
 #import data_figure_mod as dfm                
 
      
@@ -10,9 +11,16 @@ clear_Rx_Tx_buffer_flag = False
 draw_Me = False 
 def fakeFn():
     pass 
+
+class Serial_Comm_Events(QObject):
+    number_Received_pyqt_Event = pyqtSignal(int)
+
 class Serial_Model:
     #@ VCC value ADC converting factor and equal to the real value of the voltage source of the microcontroller
     VCC_VALUE:float = 5.0 #volt
+    #@ Data Received Event object
+    serial_Events = Serial_Comm_Events()
+    
     def __init__(self,evnt_memb,evt_hndl) -> None:
         #@ define the main serial object
         self.__active_Serial_Port__:pyAvrSer.Atmega_USART
@@ -131,6 +139,11 @@ class Serial_Model:
             rx_b (bool, optional): a flag to reset the active serial port rx buffer ( value must be true). Defaults to False.
             tx_b (bool, optional): a flag to reset the active serial port tx buffer (value must be true). Defaults to False.
         """
+        self.total_Rxed_Data=0
+        self.total_Rxed_Float =0
+        self.total_Rxed_Int = 0
+        self.total_Rxed_Msg =0
+        
         if int_b:
              self.rx_Voltages_Buffer = [] #self.rx_Voltages_Buffer.clear()
              self.rx_Voltages_Array_Buff = np.array(self.rx_Voltages_Buffer)
@@ -146,8 +159,11 @@ class Serial_Model:
             
         #ind=0
         while  self.Get_Rxed_Bytes_Count > 0:
+            
             self.Get_A_Rxed_Number()
-       
+            self.total_Rxed_Data+=1
+            self.serial_Events.number_Received_pyqt_Event.emit(self.total_Rxed_Data)
+            
         self.rx_Times_Array_Buff=np.array(self.rx_Times_Buffer)
         self.rx_Voltages_Array_Buff = np.array(self.rx_Voltages_Buffer)
         fl = self.rx_Times_Array_Buff.size
