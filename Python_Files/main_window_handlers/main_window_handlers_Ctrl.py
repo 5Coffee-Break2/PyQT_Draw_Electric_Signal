@@ -5,9 +5,12 @@ from PyQt6.QtCore import QThread
 from Draw_Electrical_signal_MApp import MainWindow,Ui_MainWindow
 from App_Serial_Port import pyqt_ser_comm_thread
 from Progress_Bar_Thread.rx_progress_bar import *#CProgess_Bar_Thread,Progress_Bar_Worker
+from Matplot_Files.Matplot_Window import Matplot_Window
 import csv
 from icecream import ic
 RX_PERIOD = 500
+time_differnce_lst=[]
+voltage_difference_list=[]
 class Main_Wind_Handlers:
     
     def __init__(self,client:MainWindow):
@@ -24,8 +27,8 @@ class Main_Wind_Handlers:
     
     def onNumber_Received(self,num):
         self.main_Wind_Ui.data_rxed_prgBar.setValue(num)
-        ic(num)
-        ic(self.main_Wind_Ui.data_rxed_prgBar.maximum())
+        #ic(num)
+        #ic(self.main_Wind_Ui.data_rxed_prgBar.maximum())
      
     def onrxTimer(self):
         """_summary_
@@ -82,12 +85,12 @@ class Main_Wind_Handlers:
     def onSer_Thread_Started(self,evt_ob):
        #@ stop the event timer
         self.main_Wind.rx_Timer.stop()   
-        ic(evt_ob)
+        #-ic(evt_ob)
         
     def onSer_Thread_Finished(self,evt_ob):
      
-        ic("Thread finished")
-        ic(type(evt_ob),evt_ob)
+        #-ic("Thread finished")
+        #-ic(type(evt_ob),evt_ob)
         #@ if all data was read and there's no received data in the buffer  
         self.receved_Bytes_count=1
         #@ start the event timer to check if there's a received data in the buffer
@@ -100,7 +103,7 @@ class Main_Wind_Handlers:
             btn_evnt (_type_: CommandEvent): event argument
         """
         self.app_serPrt_model.Get_System_Comm_Ports()
-        ic(type(btn_evnt))
+        #-ic(type(btn_evnt))
         com_ports = self.app_serPrt_model.Get_System_Comm_Ports() 
         self.main_Wind_Ui.ser_ports_LstVu.clear()#Pan_1_Mw.ser_ports_lst_ctrl.Clear()
         self.main_Wind_Ui.ser_ports_LstVu.addItems(com_ports) 
@@ -131,7 +134,7 @@ class Main_Wind_Handlers:
             #@ from open port handler
             if self.ser_port_name is not None:
                 self.app_serPrt_model.Activate_Serial_Port(self.ser_port_name,57600)
-                ic(type(lst_ctrl_evt))
+                #-ic(type(lst_ctrl_evt))
                 if self.app_serPrt_model.Is_Active_Port_Opend():
                     self.App_Serial_Port= self.app_serPrt_model.Get_Active_Port()
                     self.main_Wind_Ui.ser_Port_Info_LabCrl.setText(self.app_serPrt_model.Get_Active_Port_info())
@@ -241,6 +244,8 @@ class Main_Wind_Handlers:
     #-        self.main_Wind.statusBar_L2.setText(f"Progress: {val}")
     
     def Display_Received_Data(self):
+        voltage_difference_list.clear()
+        time_differnce_lst.clear()
         #ic(type(self.Display_Received_Data))
         total_numbers_Received = self.app_serPrt_model.rx_Voltages_Array_Buff.size
         #-max_index_value = total_numbers_Received -1
@@ -250,17 +255,25 @@ class Main_Wind_Handlers:
         #@ below Moved to the timer rx event
         self.main_Wind_Ui.volt_time_Tabel.clearContents()
         self.main_Wind_Ui.volt_time_Tabel.setRowCount(total_numbers_Received)
+        
         #@Set the progress bar
         prg_bar_thrd = Progress_Bar_Worker(total_numbers_Received,self.main_Wind_Ui.data_added_prgBar,None)
         thread_pool = QThreadPool()
         thread_pool.start(prg_bar_thrd)
         #-self.main_Wind_Ui.data_rxed_prgBar.setRange(0,(total_numbers_Received))
         
+        nx_indx=1
         #@ Update the statusbar with the total received data count
         self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count : {total_numbers_Received} * 2 = {total_numbers_Received * 2} ")
         for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
             try:
                
+                #@ Get the time \ volt difference
+                if nx_indx < self.app_serPrt_model.rx_Voltages_Array_Buff.size:
+                    time_differnce_lst.append( self.app_serPrt_model.rx_Times_Array_Buff[nx_indx]- self.app_serPrt_model.rx_Times_Array_Buff[ind])
+                    voltage_difference_list.append(self.app_serPrt_model.rx_Voltages_Array_Buff[nx_indx]- vol_valu)
+                    nx_indx+=1
+                
                 #@ dissable the Get data button
                 #if disab_btn is not None:
                 #    disab_btn.setEnabled(False)
@@ -286,7 +299,7 @@ class Main_Wind_Handlers:
         #@ after data received finished 
         self.receved_Bytes_count = 1   
         
-        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
+        #-ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
         prg_bar_thrd.stop()
         
        
@@ -328,11 +341,18 @@ class Main_Wind_Handlers:
             # ic("Data saved")
             # gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
 
-        with open("Voly_Time_response.csv","w") as file:
+        with open("Volt_Time_response.csv","w") as file:
             writer = csv.writer(file)
             writer.writerow(["Time","Voltage"])
             for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
                 writer.writerow([self.app_serPrt_model.rx_Times_Array_Buff[ind],vol_valu])
+                
+        with open("Volt_Time_difference.csv","w") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Time difference","Voltage difference"])
+            for ind,vol_diff_valu in enumerate( voltage_difference_list ):
+                writer.writerow([time_differnce_lst[ind],vol_diff_valu])
+                
         ic("Data saved")
         gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
 
@@ -350,9 +370,22 @@ class Main_Wind_Handlers:
         """_summary_
             Event handler for Display Curve button
         """
-        ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
+        #ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
         self.main_Wind.Setup_Matplot_Widget()
-           
+        #-self.onDisplayDifferCurve()
+        #ic(self.main_Wind.mpl_widget.mpl_widget.canva_Cursor)
+        #ic(self.main_Wind.mpl_widget.mpl_widget.inaxes((3.0,4.0)))
+        #ic(self.main_Wind.mpl_widget.mpl_widget.mouseEventCoords())
+        #ic(self.main_Wind.mpl_widget.mpl_widget.xData)
+    
+    def onDisplayDifferCurve(self):
+        self.mpl_diff_widget:Matplot_Window = Matplot_Window(self.main_Wind,time_differnce_lst,voltage_difference_list)#MplCanvas(self, width=5, height=4, dpi=100)
+        self.mpl_diff_widget.mpl_widget.axes.plot(time_differnce_lst,voltage_difference_list)      
+        self.mpl_diff_widget.mpl_widget.axes.set_xlabel("Time Difference")
+        self.mpl_diff_widget.mpl_widget.axes.set_ylabel("Voltage Difference")
+        self.mpl_diff_widget.mpl_widget.axes.set_title("Capcitor Charging Difference Curve")
+        self.mpl_diff_widget.mpl_widget.axes.grid()
+        self.mpl_diff_widget.mpl_widget.Setup_Cursor() 
         
         
         

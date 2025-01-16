@@ -164,8 +164,8 @@ class Serial_Model:
             self.total_Rxed_Data+=1
             self.serial_Events.number_Received_pyqt_Event.emit(self.total_Rxed_Data)
             
-        self.rx_Times_Array_Buff=np.array(self.rx_Times_Buffer)
-        self.rx_Voltages_Array_Buff = np.array(self.rx_Voltages_Buffer)
+        self.rx_Times_Array_Buff=np.asarray(self.rx_Times_Buffer)
+        self.rx_Voltages_Array_Buff = np.asarray(self.rx_Voltages_Buffer)
         fl = self.rx_Times_Array_Buff.size
         il = self.rx_Voltages_Array_Buff.size
         return fl,il

@@ -97,18 +97,20 @@ class MainWindow(QMainWindow):
         of the main window.
         """
         # from matplotlib.widgets import Cursor
-     
-        self.mpl_widget = Matplot_Window(self)#MplCanvas(self, width=5, height=4, dpi=100)
+        #from mpldatacursor import datacursor
+        from icecream import ic
+        self.mpl_widget = Matplot_Window(self,self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)#MplCanvas(self, width=5, height=4, dpi=100)
         # cursor = Cursor(  self.mpl_widget.mpl_widget.axes, useblit=True, color='red', linewidth=2)
         #self.layout().addWidget(self.mpl_widget)
         #self.ma_Window.volt_time_Tabel.setCellWidget(0,0,self.mpl_widget)
         
-        self.mpl_widget.mpl_widget.axes.plot(self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)      
+        lines = self.mpl_widget.mpl_widget.axes.plot(self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)      
         self.mpl_widget.mpl_widget.axes.set_xlabel("Time")
         self.mpl_widget.mpl_widget.axes.set_ylabel("Voltage")
         self.mpl_widget.mpl_widget.axes.set_title("Capcitor Charging Curve")
         self.mpl_widget.mpl_widget.axes.grid()
-        self.mpl_widget.mpl_widget.Setup_Cursor() 
+        self.mpl_widget.mpl_widget.Setup_Cursor()
+        ic(lines[::-1])
         
         #self.layout().addWidget(self.mpl_widget)
         
@@ -117,6 +119,18 @@ class MainWindow(QMainWindow):
         #mpw=Matplot_Window(self.mpl_widget)
         #mpw.show()
         
+    #def Setup_Diff_Matplot(self):
+    #     self.mpl_widget = Matplot_Window(self,self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)#MplCanvas(self, width=5, height=4, dpi=100)
+    #    # cursor = Cursor(  self.mpl_widget.mpl_widget.axes, useblit=True, color='red', linewidth=2)
+    #    #self.layout().addWidget(self.mpl_widget)
+    #    #self.ma_Window.volt_time_Tabel.setCellWidget(0,0,self.mpl_widget)
+    #    self.mpl_widget.mpl_widget.axes.plot(self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)      
+    #    self.mpl_widget.mpl_widget.axes.set_xlabel("Time")
+    #    self.mpl_widget.mpl_widget.axes.set_ylabel("Voltage")
+    #    self.mpl_widget.mpl_widget.axes.set_title("Capcitor Charging Curve")
+    #    self.mpl_widget.mpl_widget.axes.grid()
+    #    self.mpl_widget.mpl_widget.Setup_Cursor() 
+    
     def Setup_StatusBar(self):
         """
         Sets the status bar of the main window.
@@ -143,16 +157,16 @@ class MainWindow(QMainWindow):
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
         #self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
     
-    def oNhandleFinished(self):
-        self.ma_Window.read_Rx_Data_Btn.setText('Start')
-        self.progress_Bar_Thread.quit()
+    #def oNhandleFinished(self):
+    #    self.ma_Window.read_Rx_Data_Btn.setText('Start')
+    #    self.progress_Bar_Thread.quit()
     
     def Widget_Styles(self):
         """
         Sets the alignment and style for labels in the main window.
 
         This method aligns the text of `label` and `label_2` to the center and 
-        applies a bold font weight and black color to their text.
+        applies a bold font weight and black color to@onsa their text.
         """
         raise NotImplementedError("This method has not been implemented yet.")
         #self.ma_Window.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
