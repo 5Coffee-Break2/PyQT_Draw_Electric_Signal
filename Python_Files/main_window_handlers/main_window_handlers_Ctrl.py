@@ -36,8 +36,137 @@ class Main_Wind_Handlers:
         this version of the function will executed only if there was a received data in the buffer and no other data will be received
             tim_evt (_type_): _description_
         """
-       
-       #_ ic("Timer event started")
+        ic("Waiting for data")
+        ci:int=0
+        rows_nums = 1
+        int_nums_count = 0
+        float_nums_count = 0
+        
+        self.main_Wind.rx_Timer.stop()   
+        if self.app_serPrt_model.Get_Rxed_Bytes_Count :
+            ic("Data received")
+            self.main_Wind_Ui.volt_time_Tabel.clearContents() 
+            #self.app_serPrt_model.Reset_RX_TX_Data_Buffer(True,True)
+
+            if self.mpl3_widget is None:
+               self.Setup_MPL_Widget()
+           
+            #!!if not self.plot_thrd.isRunning():
+            #!!    self.plot_thrd.start()
+           #!
+            #!#-------------------------------
+           #!
+            self.mpl3_lines = self.mpl3_widget.mpl_widget.mpl_Axes.plot(self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer) 
+            #-self.mpl3_widget.mpl_widget.Setup_Cursor()
+            self.mpl3_lines[0].set_xdata(self.app_serPrt_model.rx_Times_Buffer)
+            self.mpl3_lines[0].set_ydata(self.app_serPrt_model.rx_Voltages_Buffer) 
+            #!
+          
+            #ic(self.mpl3_lines[0])
+            if not self.mpl3_widget.isVisible():
+                self.mpl3_widget.show() 
+            
+            while self.app_serPrt_model.Get_Rxed_Bytes_Count :
+                rd=self.app_serPrt_model.Get_A_Rxed_Number()
+                if(rd is not None):
+                    #--self.main_Wind_Ui.volt_time_Tabel.setRowCount(rows_nums)
+
+                    #if it's a float number represents the Time
+                    if rd[0] == b'A':#float:    
+                        float_nums_count+=1
+                        self.main_Wind_Ui.volt_time_Tabel.insertRow(rows_nums)
+                        self.main_Wind_Ui.volt_time_Tabel.setItem(ci,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Buffer[ci])))  
+                        
+                    #if it's a n integer number represents the Voltage
+                    elif rd[0] == b'I': #is int :
+                        ##@ Add Row data to the list contro
+                        self.main_Wind_Ui.volt_time_Tabel.setItem(ci,1,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Voltages_Buffer[ci])))
+                        int_nums_count+=1
+                        
+                        rows_nums+=1
+                        ci+=1
+                         
+                        #!!self.plot_thrd.need_update = True
+                        
+                            
+                        self.mpl3_lines[0].set_xdata(self.app_serPrt_model.rx_Times_Buffer)
+                        self.mpl3_lines[0].set_ydata(self.app_serPrt_model.rx_Voltages_Buffer)
+                        self.app_serPrt_model.rx_Voltages_Array_Buff = np.array(self.app_serPrt_model.rx_Voltages_Buffer,float)
+                        self.app_serPrt_model.rx_Times_Array_Buff=np.array(self.app_serPrt_model.rx_Times_Buffer,dtype=float)
+                        
+                        if self.app_serPrt_model.rx_Voltages_Buffer.__len__() > self.app_serPrt_model.rx_Times_Buffer.__len__():
+                            self.app_serPrt_model.rx_Voltages_Buffer.pop(-1)
+                        
+                        if self.app_serPrt_model.rx_Voltages_Buffer.__len__() < self.app_serPrt_model.rx_Times_Buffer.__len__():
+                            self.app_serPrt_model.rx_Times_Buffer.pop(-1)
+                             
+                        #self.mpl3_widget.mpl_widget.draw()
+                        if self.app_serPrt_model.rx_Times_Array_Buff.size > 0 :
+                            self.mpl3_widget.mpl_widget.mpl_Axes.set_xlim(0,self.app_serPrt_model.rx_Times_Array_Buff.max())
+                            self.mpl3_widget.mpl_widget.mpl_Axes.set_ylim(0,self.app_serPrt_model.rx_Voltages_Array_Buff.max())
+                        
+                        self.mpl3_widget.mpl_widget.mpl_Fig.canvas.blit(self.mpl3_widget.mpl_widget.mpl_Axes.bbox)  
+                        self.mpl3_widget.mpl_widget.mpl_Fig.canvas.draw()#draw_artist(self.mpl3_lines[0])
+                        self.mpl3_widget.mpl_widget.mpl_Fig.canvas.flush_events()   
+        ic(f"Floats: {float_nums_count} , Ints: {int_nums_count}")
+        ic("total numbers received",float_nums_count+int_nums_count)
+        ic("Data received finished")    
+        self.main_Wind.statusBar_L2.setText(f" FLOAT: {float_nums_count} <--> INT: {int_nums_count}")   
+        self.main_Wind.statusBar_L3.setText(f"Total inc : {float_nums_count+int_nums_count}")       
+        #!!else:
+        #!!    if self.plot_thrd.isRunning():
+        #!!        self.plot_thrd.stop()        
+        self.main_Wind.rx_Timer.start(RX_PERIOD)
+        # ic()
+        # 
+        # ic(self.app_serPrt_model.Get_Rxed_Bytes_Count)
+        #ic(self.app_serPrt_model.rx_Times_Buffer.__len__())
+        #
+        #ic(self.app_serPrt_model.rx_Times_Array_Buff.size)  
+        # self.app_serPrt_model.Get_Received_Data()
+        # self.Display_Received_Data()
+        #-if self.app_serPrt_model.Get_Rxed_Bytes_Count > 0:
+        #-    try:
+#-
+        #-            self.main_Wind.statusBar_L2.setText(f"Progress: ")
+        #-            self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count : {self.app_serPrt_model.Get_Rxed_Bytes_Count}")
+        #-            #@Reset the progress var value
+        #-            #self.main_Wind_Ui.data_rxed_prgBar.setValue(0)
+        #-            
+        #-            #@ if thread didn't start yet creat anew one and start it
+        #-            if not self.pyqt_ser_thread.isRunning(): #if not self.ser_thread.isRunning() :
+        #-                #@ start the thread
+        #-                self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
+        #-                self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
+        #-                self.pyqt_ser_thread.ser_Comm_Started_EVT.connect(self.onSer_Thread_Started)
+        #-                self.pyqt_ser_thread.ser_Comm_End_EVT.connect(self.onSer_Thread_Finished)
+        #-                self.pyqt_ser_thread.start()
+        #-                #Below statment has been moved to serial communiation thread stop or end event
+                       
+            #except Exception as e_thr:
+            #    ic()
+            #    ic("Error in starting thread I'm executing exception routine")
+            #    ic(e_thr)
+            #_    self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
+            #_    self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
+            #_    self.pyqt_ser_thread.ser_Comm_Started_EVT.connect(self.onSer_Thread_Started)
+            #_    self.pyqt_ser_thread.ser_Comm_End_EVT.connect(self.onSer_Thread_Finished)
+            #_    self.pyqt_ser_thread.start()
+            #_    #-self.rx_Thread = gm.thrd.Thread(target=self.Get_Received_Data)
+            #_    #-self.rx_Thread.start()
+            #_#-self.main_Wind_Ui.rx_Timer.Start(gm.mwm.RX_CHECK_EVERY)
+                
+        #@ if receiving data is in progess and not finished yet
+        #else:
+        #    #@ update the received data count with the last data size that received
+        #    self.receved_Bytes_count = self.app_serPrt_model.Get_Rxed_Bytes_Count
+        #    self.main_Wind.statusBar_L3.setText(f"Rxed Bytes Count: {self.receved_Bytes_count}" )
+    
+    
+    def Receive_All_Data_and_Run(self):
+        """_summary_
+            This function is used to receive all data from the serial port and run the thread to process the received data
+        """
         #@ if there's a received data in the buffer
         if self.app_serPrt_model.Get_Rxed_Bytes_Count: 
             #@ if received data in the buffer is completed and no other data will be received
