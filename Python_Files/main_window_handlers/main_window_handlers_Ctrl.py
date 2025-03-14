@@ -7,10 +7,12 @@ from App_Serial_Port import pyqt_ser_comm_thread
 from Progress_Bar_Thread.rx_progress_bar import *#CProgess_Bar_Thread,Progress_Bar_Worker
 from Matplot_Files.Matplot_Window import Matplot_Window
 import csv
+import numpy as np
 from icecream import ic
 RX_PERIOD = 500
 time_differnce_lst=[]
 voltage_difference_list=[]
+errors_list = []    
 class Main_Wind_Handlers:
     
     def __init__(self,client:MainWindow):
@@ -24,17 +26,55 @@ class Main_Wind_Handlers:
        #@ PyQt Serial communication thread
         self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
         self.receved_Bytes_count:int = 1
+        self.fn_counts = 0
+        self.int_counts = 0    
+        self.mpl3_widget:Matplot_Window | None = None
+        self.plot_thrd  = None  #-self.plot_thrd = pyqt_ser_comm_thread.Display_A_Curve_Thread(None,self.app_serPrt_model,None)
+        self.mpl3_lines=None 
     
     def onNumber_Received(self,num):
-        self.main_Wind_Ui.data_rxed_prgBar.setValue(num)
+        self.main_Wind_Ui.data_rxed_prgBar.setValue(self.app_serPrt_model.Get_Rxed_Bytes_Count)
         #ic(num)
         #ic(self.main_Wind_Ui.data_rxed_prgBar.maximum())
-     
-    def onrxTimer(self):
+    
+    def onRx_Error(self,evt):
         """_summary_
-        This function to check periodically(time period = RX_CHECK_EVERY) if there's a received data in the rx serial buffeer
-        this version of the function will executed only if there was a received data in the buffer and no other data will be received
-            tim_evt (_type_): _description_
+            Event handler for serial port error
+        Args:
+            evt (_type_: Error_Event): _description_: event argument
+        """
+        errors_list.append(evt)
+        gm.QtWidgets.QMessageBox(parent=self.main_Wind,
+                                 icon=gm.QtWidgets.QMessageBox.Icon.Warning,
+                                 text=f"Error : {evt}").show()
+    
+    def Display_Curve(self):
+        """_summary_
+            This function is used to display the curve of the received data
+        """
+        mpl2_widget:Matplot_Window = Matplot_Window(self.main_Wind,self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer)#MplCanvas(self, width=5, height=4, dpi=100)
+             
+        mpl2_widget.axes.set_xlabel("Time (s)")
+        mpl2_widget.axes.set_ylabel("Voltage (volt)")
+        mpl2_widget.axes.set_title("Display Capcitor Charging  Curve")
+        mpl2_widget.axes.grid()
+        mpl2_widget.axes.plot(self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer) 
+        mpl2_widget.Setup_Cursor() 
+    
+    def Setup_MPL_Widget(self):
+        """_summary_
+            This function is used to setup the Matplot widget
+        """ 
+        self.mpl3_widget:Matplot_Window = Matplot_Window(self.main_Wind,self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer)#MplCanvas(self, width=5, height=4, dpi=100)
+        self.mpl3_widget.mpl_widget.mpl_Axes.set_xlabel("Time Instantly (s)")
+        self.mpl3_widget.mpl_widget.mpl_Axes.set_ylabel("Voltage Instantly (volt)")
+        self.mpl3_widget.mpl_widget.mpl_Axes.set_title("Display Capcitor Charging  Curve instantly")
+        self.mpl3_widget.mpl_widget.mpl_Axes.grid()
+        # self.mpl3_lines = self.mpl3_widget.mpl_widget.mpl_Axes.plot(self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer) 
+        # self.mpl3_widget.mpl_widget.Setup_Cursor() 
+    def Receive_Data_Thrid_Instantly(self):
+        """_summary_
+            This function is used to receive data from the serial port instantly
         """
         ic("Waiting for data")
         ci:int=0
@@ -43,29 +83,84 @@ class Main_Wind_Handlers:
         float_nums_count = 0
         
         self.main_Wind.rx_Timer.stop()   
+        
         if self.app_serPrt_model.Get_Rxed_Bytes_Count :
             ic("Data received")
             self.main_Wind_Ui.volt_time_Tabel.clearContents() 
-            #self.app_serPrt_model.Reset_RX_TX_Data_Buffer(True,True)
-
+ 
+            if self.plot_thrd is None:
+                self.plot_thrd = pyqt_ser_comm_thread.Display_A_Curve_Thread(None,self.app_serPrt_model,None)
+                self.plot_thrd.start()
+            elif not self.plot_thrd.isRunning():
+                self.plot_thrd.start()
+                    
+            while self.app_serPrt_model.Get_Rxed_Bytes_Count :
+                rd=self.app_serPrt_model.Get_A_Rxed_Number()
+                if(rd is not None):
+                    #--self.main_Wind_Ui.volt_time_Tabel.setRowCount(rows_nums)
+                    #if it's a float number represents the Time
+                    if rd[0] == b'A':#float:    
+                        float_nums_count+=1
+                        #self.main_Wind_Ui.volt_time_Tabel.insertRow(rows_nums)
+                        self.main_Wind_Ui.volt_time_Tabel.setItem(ci,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Buffer[ci])))        
+                     #if it's a n integer number represents the Voltage
+                    elif rd[0] == b'I': #is int :
+                        ##@ Add Row data to the list contro
+                        self.main_Wind_Ui.volt_time_Tabel.setItem(ci,1,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Voltages_Buffer[ci])))
+                        int_nums_count +=1
+                        rows_nums+=1
+                        ci+=1
+                        self.main_Wind_Ui.volt_time_Tabel.setRowCount(rows_nums) 
+                        self.plot_thrd.need_update = True
+                        
+        else:
+            if  self.plot_thrd is not None and self.plot_thrd.isRunning():
+                self.plot_thrd.stop()
+                ic("Thread stopped")                            
+                       
+        ic(f"Floats: {float_nums_count} , Ints: {int_nums_count}")
+        ic("total numbers received",float_nums_count+int_nums_count)
+        ic("Data received finished display thread has been stopped")    
+        self.main_Wind.statusBar_L2.setText(f" FLOAT: {float_nums_count} <--> INT: {int_nums_count}")   
+        self.main_Wind.statusBar_L3.setText(f"Total inc : {float_nums_count+int_nums_count}")       
+       
+        self.main_Wind.rx_Timer.start(RX_PERIOD)
+            
+    def Receive_Data_Immediately(self):
+        """_summary_
+            This function is used to receive data from the serial port immediately
+        """
+        ic("Waiting for data")
+        ci:int=0
+        rows_nums = 1
+        int_nums_count = 0
+        float_nums_count = 0
+        #self.main_Wind_Ui.volt_time_Tabel.clearContents() 
+        self.main_Wind.rx_Timer.stop()   
+        if self.app_serPrt_model.Get_Rxed_Bytes_Count :
+            ic("Data received")
+            
+            
+            
             if self.mpl3_widget is None:
-               self.Setup_MPL_Widget()
+                self.Setup_MPL_Widget()
+                self.mpl3_lines = self.mpl3_widget.mpl_widget.mpl_Axes.plot(self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer) 
+                self.mpl3_widget.mpl_widget.Setup_Cursor()
            
             #!!if not self.plot_thrd.isRunning():
             #!!    self.plot_thrd.start()
            #!
             #!#-------------------------------
            #!
-            self.mpl3_lines = self.mpl3_widget.mpl_widget.mpl_Axes.plot(self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer) 
-            #-self.mpl3_widget.mpl_widget.Setup_Cursor()
-            self.mpl3_lines[0].set_xdata(self.app_serPrt_model.rx_Times_Buffer)
-            self.mpl3_lines[0].set_ydata(self.app_serPrt_model.rx_Voltages_Buffer) 
+            
+            #-self.mpl3_lines[0].set_xdata(self.app_serPrt_model.rx_Times_Buffer)
+            #-self.mpl3_lines[0].set_ydata(self.app_serPrt_model.rx_Voltages_Buffer) 
             #!
           
             #ic(self.mpl3_lines[0])
             if not self.mpl3_widget.isVisible():
                 self.mpl3_widget.show() 
-            
+            self.app_serPrt_model.Reset_RX_TX_Data_Buffer(True,True)
             while self.app_serPrt_model.Get_Rxed_Bytes_Count :
                 rd=self.app_serPrt_model.Get_A_Rxed_Number()
                 if(rd is not None):
@@ -106,8 +201,15 @@ class Main_Wind_Handlers:
                             self.mpl3_widget.mpl_widget.mpl_Axes.set_ylim(0,self.app_serPrt_model.rx_Voltages_Array_Buff.max())
                         
                         self.mpl3_widget.mpl_widget.mpl_Fig.canvas.blit(self.mpl3_widget.mpl_widget.mpl_Axes.bbox)  
-                        self.mpl3_widget.mpl_widget.mpl_Fig.canvas.draw()#draw_artist(self.mpl3_lines[0])
-                        self.mpl3_widget.mpl_widget.mpl_Fig.canvas.flush_events()   
+                        try:
+                            self.mpl3_widget.mpl_widget.mpl_Fig.canvas.draw()#draw_artist(self.mpl3_lines[0])
+                            #self.mpl3_widget.mpl_widget.mpl_Fig.canvas.draw()#draw_artist(self.mpl3_lines[0])
+                        #self.mpl3_widget.mpl_widget.mpl_Fig.canvas.flush_events()   
+                        except ValueError as e:#except Exception as e:#valueError as e:
+                            ic()
+                            ic(e)
+                        self.mpl3_widget.mpl_widget.mpl_Fig.canvas.flush_events()
+                            
         ic(f"Floats: {float_nums_count} , Ints: {int_nums_count}")
         ic("total numbers received",float_nums_count+int_nums_count)
         ic("Data received finished")    
@@ -181,7 +283,7 @@ class Main_Wind_Handlers:
                     #@ if thread didn't start yet creat anew one and start it
                     if not self.pyqt_ser_thread.isRunning(): #if not self.ser_thread.isRunning() :
                         #@ approximation for the total received numbers count to set the progress bar max value (6.5and 31 values are estimated by experements)
-                        self.main_Wind_Ui.data_rxed_prgBar.setMaximum(int(self.receved_Bytes_count/6.4+31))
+                        self.main_Wind_Ui.data_rxed_prgBar.setMaximum(self.receved_Bytes_count)#(int(self.receved_Bytes_count/6.4+31))
                         #@ start the thread
                         self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
                         self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
@@ -190,8 +292,10 @@ class Main_Wind_Handlers:
                         self.pyqt_ser_thread.start()
                         #Below statment has been moved to serial communiation thread stop or end event
                        
-                except:
+                except Exception as e_thr:
+                    ic()
                     ic("Error in starting thread I'm executing exception routine")
+                    ic(e_thr)
                 #_    self.pyqt_ser_thread = pyqt_ser_comm_thread.Ser_PyQt_Thread(self.app_serPrt_model,self.Display_Received_Data)
                 #_    self.pyqt_ser_thread.total_counts = self.receved_Bytes_count
                 #_    self.pyqt_ser_thread.ser_Comm_Started_EVT.connect(self.onSer_Thread_Started)
@@ -209,8 +313,19 @@ class Main_Wind_Handlers:
         
         #@_ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
         #@_ic("Timer event finished")
+         
+    def onrxTimer(self):
+        """_summary_
+        This function to check periodically(time period = RX_CHECK_EVERY) if there's a received data in the rx serial buffeer
+        this version of the function will executed only if there was a received data in the buffer and no other data will be received
+            tim_evt (_type_): _description_
+        """
        
-             
+       #_ ic("Timer event started")
+        #-self.Receive_All_Data_and_Run()  
+        self.Receive_Data_Immediately()         
+        #self.Receive_Data_Thrid_Instantly()
+    
     def onSer_Thread_Started(self,evt_ob):
        #@ stop the event timer
         self.main_Wind.rx_Timer.stop()   
@@ -220,11 +335,19 @@ class Main_Wind_Handlers:
      
         #-ic("Thread finished")
         #-ic(type(evt_ob),evt_ob)
-        #@ if all data was read and there's no received data in the buffer  
+        #@ if all data was read and there's no received data in the buffer then reset the received data count 
         self.receved_Bytes_count=1
         #@ start the event timer to check if there's a received data in the buffer
         self.main_Wind.rx_Timer.start(RX_PERIOD)                       
-    
+        
+        ic()
+        ic(type(evt_ob))
+        ic(evt_ob,evt_ob[0],evt_ob[1])
+        
+        self.fn_counts= evt_ob[0]
+        self.int_counts = evt_ob[1] 
+        #self.main_Wind_Ui.data_rxed_prgBar.setMaximum(evt_ob[0]+evt_ob[1])
+        
     def onlist_Sys_Ports_btn(self,btn_evnt):
         """_summary_
             Event Handler for Get Ports list button
@@ -283,7 +406,9 @@ class Main_Wind_Handlers:
         """
         if self.ser_port_name is not None:
             self.app_serPrt_model.Activate_Serial_Port(self.ser_port_name,57600)
-            ic(type(btn_evt),btn_evt.GetEventObject())
+            #@ Register the error event
+            self.app_serPrt_model.Register_in_Error_Event(self.onRx_Error)
+            #ic(type(btn_evt),btn_evt.GetEventObject())
             if self.app_serPrt_model.Is_Active_Port_Opend():
                 self.App_Serial_Port= self.app_serPrt_model.Get_Active_Port()
                 self.main_Wind_Ui.ser_Port_Info_LabCrl.setText(self.app_serPrt_model.Get_Active_Port_info())
@@ -376,60 +501,64 @@ class Main_Wind_Handlers:
         voltage_difference_list.clear()
         time_differnce_lst.clear()
         #ic(type(self.Display_Received_Data))
-        total_numbers_Received = self.app_serPrt_model.rx_Voltages_Array_Buff.size
+        total_numbers_Received = self.pyqt_ser_thread .total_rxed_numbers# self.app_serPrt_model.rx_Times_Array_Buff.size
         #-max_index_value = total_numbers_Received -1
         #----self.main_Wind.progress_Bar_Thread.start()
         #-self.Prog_Bar_Thread_2= CProgess_Bar_Thread(self.main_Wind,self.app_serPrt_model.rx_Voltages_Array_Buff.size,self.Update_Progess_Bar_Value,self.main_Wind_Ui.data_rxed_prgBar)
         #-self.Prog_Bar_Thread_2.start()
         #@ below Moved to the timer rx event
+        
+        self.fn_counts = self.pyqt_ser_thread.tot_flt
+        self.int_counts = self.pyqt_ser_thread.tot_int
+        
         self.main_Wind_Ui.volt_time_Tabel.clearContents()
-        self.main_Wind_Ui.volt_time_Tabel.setRowCount(total_numbers_Received)
+        if self.fn_counts >= self.int_counts:
+            self.main_Wind_Ui.volt_time_Tabel.setRowCount(self.int_counts)
+        else:   
+            self.main_Wind_Ui.volt_time_Tabel.setRowCount(self.fn_counts)
         
         #@Set the progress bar
-        prg_bar_thrd = Progress_Bar_Worker(total_numbers_Received,self.main_Wind_Ui.data_added_prgBar,None)
-        thread_pool = QThreadPool()
-        thread_pool.start(prg_bar_thrd)
+        #----prg_bar_thrd = Progress_Bar_Worker(total_numbers_Received,self.main_Wind_Ui.data_added_prgBar,None)
+        #----thread_pool = QThreadPool()
+        #----thread_pool.start(prg_bar_thrd)
         #-self.main_Wind_Ui.data_rxed_prgBar.setRange(0,(total_numbers_Received))
         
-        nx_indx=1
         #@ Update the statusbar with the total received data count
-        self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count : {total_numbers_Received} * 2 = {total_numbers_Received * 2} ")
-        for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
-            try:
-               
-                #@ Get the time \ volt difference
-                if nx_indx < self.app_serPrt_model.rx_Voltages_Array_Buff.size:
-                    time_differnce_lst.append( self.app_serPrt_model.rx_Times_Array_Buff[nx_indx]- self.app_serPrt_model.rx_Times_Array_Buff[ind])
-                    voltage_difference_list.append(self.app_serPrt_model.rx_Voltages_Array_Buff[nx_indx]- vol_valu)
-                    nx_indx+=1
-                
+        self.main_Wind.statusBar_L1.setText(f"Total Rxed Nums Count :  {total_numbers_Received } = FLT: {self.fn_counts} + INT: {self.int_counts}")
+        #-ic(self.app_serPrt_model.rx_Voltages_Array_Buff.shape)
+        #-ic(self.app_serPrt_model.rx_Times_Array_Buff.shape)
+        
+        for ind,time_valu in enumerate( self.app_serPrt_model.rx_Times_Array_Buff ):#for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
+           # try:
                 #@ dissable the Get data button
                 #if disab_btn is not None:
                 #    disab_btn.setEnabled(False)
                 ##@ Add columns data to the list contro
+                self.main_Wind_Ui.volt_time_Tabel.setItem(ind,0,gm.QtWidgets.QTableWidgetItem(str(time_valu)))
+                #self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Voltages_Array_Buff[ind])))   
+        for indvol,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
+                self.main_Wind_Ui.volt_time_Tabel.setItem(indvol,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))    
                 
-                self.main_Wind_Ui.volt_time_Tabel.setItem(ind,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Array_Buff[ind])))
-                self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))   
-                #self.main_Wind_Ui.volt_time_Tabel.repaint( self.main_Wind_Ui.volt_time_Tabel.geometry())
+                #__ self.main_Wind_Ui.volt_time_Tabel.setItem(ind,0,gm.QtWidgets.QTableWidgetItem(str(self.app_serPrt_model.rx_Times_Array_Buff[ind])))
+                #__ self.main_Wind_Ui.volt_time_Tabel.setItem(ind,1,gm.QtWidgets.QTableWidgetItem(str(vol_valu)))   
+              
                 #@updat the progess bar value
                 #-self.Prog_Bar_Thread_2.count = ind
                 #--self.main_Wind_Ui.data_rxed_prgBar.setValue(ind+1)
-                prg_bar_thrd.cur_val=ind+1
-                
-               
-                
-            except IndexError:
-                self.main_Wind.statusBar().showMessage("Index Error"+(str(self.app_serPrt_model.Get_Rxed_Bytes_Count)))
+                #----prg_bar_thrd.cur_val = ind+1
+            
+           # except IndexError:
+           #     self.main_Wind.statusBar().showMessage("Index Error"+(str(self.app_serPrt_model.Get_Rxed_Bytes_Count)))
                 
         #@ after data received finished re-enabel the Get received data button
         #if disab_btn is not None:
         #     disab_btn.setEnabled(True)
         #
         #@ after data received finished 
-        self.receved_Bytes_count = 1   
+        #self.receved_Bytes_count = 1   
         
         #-ic("Serial thread running status",self.pyqt_ser_thread.isRunning()) 
-        prg_bar_thrd.stop()
+        #----prg_bar_thrd.stop()
         
        
              
@@ -476,11 +605,11 @@ class Main_Wind_Handlers:
             for ind,vol_valu in enumerate( self.app_serPrt_model.rx_Voltages_Array_Buff ):
                 writer.writerow([self.app_serPrt_model.rx_Times_Array_Buff[ind],vol_valu])
                 
-        with open("Volt_Time_difference.csv","w") as file:
-            writer = csv.writer(file)
-            writer.writerow(["Time difference","Voltage difference"])
-            for ind,vol_diff_valu in enumerate( voltage_difference_list ):
-                writer.writerow([time_differnce_lst[ind],vol_diff_valu])
+        #-with open("Volt_Time_difference.csv","w") as file:
+        #-    writer = csv.writer(file)
+        #-    writer.writerow(["Time difference","Voltage difference"])
+        #-    for ind,vol_diff_valu in enumerate( voltage_difference_list ):
+        #-        writer.writerow([time_differnce_lst[ind],vol_diff_valu])
                 
         ic("Data saved")
         gm.QtWidgets.QMessageBox(parent=self.main_Wind,text="Data saved").show()
@@ -509,15 +638,45 @@ class Main_Wind_Handlers:
     
     def onDisplayDifferCurve(self):
         self.mpl_diff_widget:Matplot_Window = Matplot_Window(self.main_Wind,time_differnce_lst,voltage_difference_list)#MplCanvas(self, width=5, height=4, dpi=100)
-        self.mpl_diff_widget.mpl_widget.axes.plot(time_differnce_lst,voltage_difference_list)      
-        self.mpl_diff_widget.mpl_widget.axes.set_xlabel("Time Difference")
-        self.mpl_diff_widget.mpl_widget.axes.set_ylabel("Voltage Difference")
-        self.mpl_diff_widget.mpl_widget.axes.set_title("Capcitor Charging Difference Curve")
-        self.mpl_diff_widget.mpl_widget.axes.grid()
+        self.mpl_diff_widget.mpl_widget.mpl_Axes.plot(time_differnce_lst,voltage_difference_list)      
+        self.mpl_diff_widget.mpl_widget.mpl_Axes.set_xlabel("Time Difference")
+        self.mpl_diff_widget.mpl_widget.mpl_Axes.set_ylabel("Voltage Difference")
+        self.mpl_diff_widget.mpl_widget.mpl_Axes.set_title("Capcitor Charging Difference Curve")
+        self.mpl_diff_widget.mpl_widget.mpl_Axes.grid()
         self.mpl_diff_widget.mpl_widget.Setup_Cursor() 
         
         
+    def onCalculate_Rx_diffeerence(self):
+        #@ Get the time \ volt difference we used - 2 because we subtract the next value from the previouse value to get the difference
+        ind_limit = self.app_serPrt_model.rx_Voltages_Array_Buff.size-2
+        ind_nx =0 
+        for i,v in enumerate(self.app_serPrt_model.rx_Times_Array_Buff):
+            if i <=ind_limit :
+                ind_nx = i+1
+                time_differnce_lst.append( round(self.app_serPrt_model.rx_Times_Array_Buff[ind_nx]-v,4))
+                voltage_difference_list.append(round(self.app_serPrt_model.rx_Voltages_Array_Buff[ind_nx]- self.app_serPrt_model.rx_Voltages_Array_Buff[i],4))
+        nr= 0
+        for i,td in enumerate(time_differnce_lst):
+            if i <=ind_limit :
+                self.Add_Tabel_Item(str(td),(nr,2),self.main_Wind_Ui.volt_time_Tabel)
+                self.Add_Tabel_Item(str(voltage_difference_list[i]),(nr,3),self.main_Wind_Ui.volt_time_Tabel)
+                nr+=2
+            ic(nr)         
+            #ic(time_differnce_lst)
+            #ic(voltage_difference_list)
+    
+    def Add_Tabel_Item(self,item_str:str,pos: tuple,tabel:gm.QtWidgets.QTableWidget):
+         ##@ Add row data to the tabel control
+        tabel.setItem(pos[0],pos[1],gm.QtWidgets.QTableWidgetItem(item_str))
         
-        
-        
-             
+        """
+        import autograd.numpy as np
+from autograd import grad
+
+def fct(x):
+    y = x**2+1
+    return y
+
+grad_fct = grad(fct)
+print(grad_fct(1.0))
+        """

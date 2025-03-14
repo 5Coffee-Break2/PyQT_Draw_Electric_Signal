@@ -1,9 +1,10 @@
 import Py_AVR_USART_Lib_Wind as pyAvrSer
 #import threading as scthrd
 #from time import sleep
-from wx import MessageBox,CallAfter,Frame       
+#from wx import MessageBox,CallAfter,Frame       
 import numpy as np
 from PyQt6.QtCore import pyqtSignal,QObject
+from time import sleep
 #import data_figure_mod as dfm                
 
      
@@ -12,6 +13,8 @@ draw_Me = False
 def fakeFn():
     pass 
 
+#@ To define a pyqt event then it must be inherited from QObject
+#@Define a class for the serial communication events
 class Serial_Comm_Events(QObject):
     number_Received_pyqt_Event = pyqtSignal(int)
 
@@ -26,8 +29,8 @@ class Serial_Model:
         self.__active_Serial_Port__:pyAvrSer.Atmega_USART
         self.rx_Times_Buffer:list[float] = []
         self.rx_Voltages_Buffer:list[float] =[]
-        #-self.rx_Voltages_Array_Buff = np.array(self.rx_Voltages_Buffer,float)
-        #-self.rx_Times_Array_Buff=np.array(self.rx_Times_Buffer,dtype=float)
+        self.rx_Voltages_Array_Buff = np.array(self.rx_Voltages_Buffer,float)
+        self.rx_Times_Array_Buff=np.array(self.rx_Times_Buffer,dtype=float)
         # self.rxed_Data_Type = {  
         #                                             "float_Type":pyAvrSer.Atmega_USART.SOB_F_By,
         #                                             "int_Type":pyAvrSer.Atmega_USART.SOB_I_By,
@@ -41,9 +44,7 @@ class Serial_Model:
         
         self.Eror_Evt_Member = evnt_memb
         self.Eror_Event_Handler = evt_hndl
-       
-       
-        
+    
         #_____________________________ End of Error Events Section ________________________________#
         
     @property
@@ -57,6 +58,9 @@ class Serial_Model:
     def Activate_Serial_Port(self,port_num,baud_rate):
         self.__active_Serial_Port__ = pyAvrSer.Atmega_USART(baud_rate= baud_rate,port_num=port_num)
     
+    def Register_in_Error_Event(self,fn:classmethod):
+        self.__active_Serial_Port__.Register_in_Rx_Error_Event(fn)#data_Rxed_Error_Events.rx_Error_Event.connect(fn)
+        
     def Close_Port(self):
         if self.__active_Serial_Port__ is not None :
             self.__active_Serial_Port__.Close_Main_Port()
@@ -67,7 +71,7 @@ class Serial_Model:
     def Get_Active_Port(self):
         return  self.__active_Serial_Port__.Get_Main_Port
     
-    def Get_A_Rxed_Number(self) :               #-> None | tuple[bytes | Literal[True], float] | tuple[bytes | Literal[True], int] | Literal[False]:
+    def Get_A_Rxed_Number(self,precsion=4) :               #-> None | tuple[bytes | Literal[True], float] | tuple[bytes | Literal[True], int] | Literal[False]:
         """
         Purpose: Return a single received number
         """
@@ -90,7 +94,7 @@ class Serial_Model:
         
                 #!replace list elements Syntax: l=list(map(lambda x: x.replace(‘old_value’,’new_value’),l))
         if isinstance(rn,int):
-                self.rx_Voltages_Buffer.append(rn* self.VCC_VALUE /1024)
+                self.rx_Voltages_Buffer.append(round(rn* (self.VCC_VALUE /1024.0),precsion))
                 return rt,rn
         elif isinstance(rn,float):
                 self.rx_Times_Buffer.append(rn)
@@ -145,12 +149,11 @@ class Serial_Model:
         self.total_Rxed_Msg =0
         
         if int_b:
-             self.rx_Voltages_Buffer = [] #self.rx_Voltages_Buffer.clear()
-             self.rx_Voltages_Array_Buff = np.array(self.rx_Voltages_Buffer)
+             self.rx_Voltages_Buffer.clear()   #self.rx_Voltages_Buffer = [] 
+             self.rx_Voltages_Array_Buff = np.asarray(self.rx_Voltages_Buffer)
         if float_b :
-            self.rx_Times_Buffer = [] #self.rx_Times_Buffer.clear()
-            self.rx_Times_Array_Buff=np.array(self.rx_Times_Buffer)
-    
+            self.rx_Times_Buffer.clear()    #self.rx_Times_Buffer = []
+            self.rx_Times_Array_Buff=np.asarray(self.rx_Times_Buffer)
     
     def Get_All_Data(self):
         if  self.Get_Rxed_Bytes_Count <= 0:
@@ -163,6 +166,7 @@ class Serial_Model:
             self.Get_A_Rxed_Number()
             self.total_Rxed_Data+=1
             self.serial_Events.number_Received_pyqt_Event.emit(self.total_Rxed_Data)
+            #sleep(0.00001)
             
         self.rx_Times_Array_Buff=np.asarray(self.rx_Times_Buffer)
         self.rx_Voltages_Array_Buff = np.asarray(self.rx_Voltages_Buffer)

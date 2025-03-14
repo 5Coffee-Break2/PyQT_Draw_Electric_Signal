@@ -103,6 +103,12 @@
       <height>401</height>
      </rect>
     </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+      <horstretch>200</horstretch>
+      <verstretch>200</verstretch>
+     </sizepolicy>
+    </property>
    </widget>
    <widget class="QPushButton" name="save_Rx_Data_Btn">
     <property name="geometry">
@@ -139,8 +145,8 @@
    <widget class="QPushButton" name="dispaly_Rx_Data_Btn">
     <property name="geometry">
      <rect>
-      <x>270</x>
-      <y>370</y>
+      <x>30</x>
+      <y>410</y>
       <width>111</width>
       <height>29</height>
      </rect>
@@ -202,6 +208,31 @@
     </property>
     <property name="text">
      <string>Number added progress</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="calculate_Rx_Data_Diff_Btn">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>410</y>
+      <width>161</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+      <horstretch>160</horstretch>
+      <verstretch>40</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>60</width>
+      <height>25</height>
+     </size>
+    </property>
+    <property name="text">
+     <string>Calculate Rx differintiation</string>
     </property>
    </widget>
   </widget>

@@ -78,8 +78,8 @@ class MainWindow(QMainWindow):
     }
     """
         self.setStyleSheet(css)
-        self.ma_Window.volt_time_Tabel.setColumnCount(2)
-        self.ma_Window.volt_time_Tabel.setHorizontalHeaderLabels(["Time","Voltage"])
+        self.ma_Window.volt_time_Tabel.setColumnCount(4)
+        self.ma_Window.volt_time_Tabel.setHorizontalHeaderLabels(["Time","Voltage","Time Difference","Voltgae Difference"])
         
         self.Events_Handlers()
     
@@ -89,7 +89,7 @@ class MainWindow(QMainWindow):
         # print(f"Progress: {pval}")
         # assert isinstance(pval, int)
     
-    def Setup_Matplot_Widget(self):
+    def   Setup_Matplot_Widget(self):
         """
         Sets the Matplotlib widget in the main window.
 
@@ -104,13 +104,14 @@ class MainWindow(QMainWindow):
         #self.layout().addWidget(self.mpl_widget)
         #self.ma_Window.volt_time_Tabel.setCellWidget(0,0,self.mpl_widget)
         
-        lines = self.mpl_widget.mpl_widget.axes.plot(self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)      
-        self.mpl_widget.mpl_widget.axes.set_xlabel("Time")
-        self.mpl_widget.mpl_widget.axes.set_ylabel("Voltage")
-        self.mpl_widget.mpl_widget.axes.set_title("Capcitor Charging Curve")
-        self.mpl_widget.mpl_widget.axes.grid()
+        self.mpl_Lines = self.mpl_widget.mpl_widget.mpl_Axes.plot(self.ma_Window_Handlers.app_serPrt_model.rx_Times_Array_Buff,self.ma_Window_Handlers.app_serPrt_model.rx_Voltages_Array_Buff)      
+        self.mpl_widget.mpl_widget.mpl_Axes.set_xlabel("Time")
+        self.mpl_widget.mpl_widget.mpl_Axes.set_ylabel("Voltage")
+        self.mpl_widget.mpl_widget.mpl_Axes.set_title("Capcitor Charging Curve")
+        self.mpl_widget.mpl_widget.mpl_Axes.grid()
         self.mpl_widget.mpl_widget.Setup_Cursor()
-        ic(lines[::-1])
+        ic(len(self.mpl_Lines))
+        ic(self.mpl_Lines[::-1])
         
         #self.layout().addWidget(self.mpl_widget)
         
@@ -155,6 +156,7 @@ class MainWindow(QMainWindow):
         self.rx_Timer.timeout.connect(self.ma_Window_Handlers.onrxTimer)
         self.ma_Window.save_Rx_Data_Btn.clicked.connect(self.ma_Window_Handlers.onSaveData)
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
+        self.ma_Window.calculate_Rx_Data_Diff_Btn.clicked.connect(self.ma_Window_Handlers.onCalculate_Rx_diffeerence)
         #self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
     
     #def oNhandleFinished(self):

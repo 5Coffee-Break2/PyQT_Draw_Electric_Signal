@@ -2,6 +2,7 @@ from PySide6 import QtWidgets  # import PySide6 before matplotlib
 import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from matplotlib.pyplot import subplots
 from icecream import ic
 from matplotlib.backend_bases import MouseEvent     #used for event type hint
 from matplotlib.lines import Line2D                 #used for event type hint
@@ -10,17 +11,21 @@ matplotlib.use("QtAgg")
 
 class MplCanvas(FigureCanvasQTAgg):
    def __init__(self,xdata=None,ydata=None,arent=None, width=5, height=4, dpi=100):
-           self.fig = Figure(figsize=(width, height), dpi=dpi)
-           self.axes = self.fig.add_subplot(111)
-           super().__init__(self.fig)
+           self.mpl_Fig = Figure(figsize=(width, height), dpi=dpi)
+           self.mpl_Axes = self.mpl_Fig.add_subplot(111)
+           #_self.mpl_Fig,self.mpl_Axes = subplots()
+           #_self.mpl_Fig.set_figwidth(width)
+           #_self.mpl_Fig.set_figheight(height)
+           #_self.mpl_Fig.set_dpi(dpi)
+           super().__init__(self.mpl_Fig)
            self.canva_Cursor = None
            #self.fig.canvas.mpl_connect('motion_notify_event', self.canva_Cursor.on_mouse_move)
            self.xData=xdata
            self.yData =ydata  
            
    def Setup_Cursor(self):
-        self.canva_Cursor = Cursor(self.axes,self.xData,self.yData)
-        self.fig.canvas.mpl_connect('motion_notify_event', self.canva_Cursor.on_mouse_move)
+        self.canva_Cursor = Cursor(self.mpl_Axes,self.xData,self.yData)
+        self.mpl_Fig.canvas.mpl_connect('motion_notify_event', self.canva_Cursor.on_mouse_move)
         #ic(self.axes.add_table())
         
 class Cursor:

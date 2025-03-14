@@ -46,6 +46,11 @@ enum  num_Type { I_type,F_type,D_type} ;
 #include "LCD_Setting.hpp"
 //#include "string.h"
 
+//______Global Variables (an external global variable to the lCD is declared at the end of this file)_______
+extern LineNumber g_Line;
+extern uint8_t g_Pos;
+extern Page g_Page;
+
 class LCD_HD44780
 {
     private:
@@ -209,7 +214,7 @@ class LCD_HD44780
  // void LCD_ShowNextPage();
  // void LCD_Shift(char d);
 };
-
+extern LCD_HD44780 *LCD_Ptr;
 //bool ReadPortPin(volatile unsigned char *, char );
 
 #endif

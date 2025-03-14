@@ -17,7 +17,7 @@
 int WriteByteToStdout(char u8Data, FILE *stream);
  FILE PrintF_WR_Stream;
  // a glopal LCD pointer and neceeay parameters to be used any where in the project
- LCD_HD44780 *LCD_Ptr; // don't remove it
+ LCD_HD44780 *LCD_Ptr; //= nullptr; // don't remove it
  LineNumber g_Line;
  uint8_t g_Pos;
  Page g_Page;

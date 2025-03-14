@@ -818,24 +818,29 @@ ISR(USART_RXC_vect)
 //-return end_of_Tx_Block;
 //-}
 
-bool ATMG8A_USART::Transmit_Number(unsigned char num_type, const char *fmt, float fval, long l_value)
+bool ATMG8A_USART::Transmit_Number(unsigned char num_type, const char *fmt, float f_val, long l_value)
 {
   used_Tx_Buffer_Size = 0;
   Tx_Buffer[BUFFER_SIZE] = {'\0'};
-
+  //@for (uint8_t i = 0; i < BUFFER_SIZE; i++)
+  //@{
+  //@  Tx_Buffer[i] = '\0';
+  //@} 
   // char tx_Num_Buffer[Tx_NUM_SIZE] = {'\0'};
-  Tx_BufferPtr = Tx_Buffer;
+ // Tx_BufferPtr = Tx_Buffer;
   //  char tx_Num_Buffer[Tx_NUM_SIZE] = {'\0'};
 
   //  ptrLCD -> LCD_Show_Float(fval,1,1,4,Line_2);
   if (num_type == SOB_I)
   {
     snprintf((char *)Tx_Buffer, BUFFER_SIZE, fmt, l_value);
+    //snprintf_P((char *)Tx_Buffer, BUFFER_SIZE, fmt, l_value);
   }
 
   else // num_type == SOB_F
   {
-    snprintf((char *)Tx_Buffer, BUFFER_SIZE, fmt, fval); //
+    snprintf((char *)Tx_Buffer, BUFFER_SIZE, fmt, f_val); //
+    //snprintf_P((char *)Tx_Buffer, BUFFER_SIZE, fmt, f_val); //
   }
 
   // essetial initialisations
@@ -844,7 +849,9 @@ bool ATMG8A_USART::Transmit_Number(unsigned char num_type, const char *fmt, floa
   // reset end of sending a tx block flag
   end_of_Tx_Block = false;
 
+  //@start transmiion by sending rhe number type
   Transmit_Char(num_type);
+  //@start transmitting of the number
   while (*Tx_BufferPtr != '\0')
   {
     if (*Tx_BufferPtr == ' ')
@@ -858,6 +865,7 @@ bool ATMG8A_USART::Transmit_Number(unsigned char num_type, const char *fmt, floa
     // _delay_us(300);//(INTRPT_DEALY); //while (!(UCSRA & (1 << TXC))){};
     transmitted_Chars_Count++;
   }
+  //@ End of transmission by sending the end of block sign
   num_type = EOB;
   Transmit_Char(num_type);
   end_of_Tx_Block = true;
