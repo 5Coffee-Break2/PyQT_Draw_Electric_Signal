@@ -6,12 +6,13 @@
 //@ To Enable/Disable using function template 1/0
 #define USE_TX_FUNCTION_TEMPLATE 0
 //@ To Enable/Disable using General interrupt 1/0
-#define USE_USART_INTERRUPTS 0
+#define USE_USART_INTERRUPTS 1
 //@ To Enable/Disable using Rx Interrupt 1/0
-#define USE_RX_INTERRUPT 0
+#define USE_RX_INTERRUPT 1
 //@ To Enable/Disable using Tx Interrupt 1/0
 # define USE_TX_INTERRUPT 0
-
+//@ To Define an action function executed after receiving a complete data
+#define EXECUTE_AN_ACTION 0
 //********************************************** */
 //@Use extra buffers to store the received data a definite buffer for each data type
 #ifndef USE_TX_RX_BUFFERS

@@ -3,24 +3,25 @@
 // char str[BUFFER_LENGTH];
 //  char *gcvt(double number, int ndigit, char *buf);
 // #include <util\delay.h>
-//#include "global_vars.hpp"
+// #include "global_vars.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include "LCDHD44780_AVRLib.hpp"
 #include "LCD-HD44780Commands.hpp"
 // include <AVR_ExternalInterrupts.hpp>
 #include "KH_Atmega8.hpp"
-
+//_#include "Global_Stufs.hpp"
 
 // redirect the standard output stream with a custom user defined stream
 // For definig an output stream to be used by printf function
 int WriteByteToStdout(char u8Data, FILE *stream);
- FILE PrintF_WR_Stream;
- // a glopal LCD pointer and neceeay parameters to be used any where in the project
- LCD_HD44780 *LCD_Ptr; //= nullptr; // don't remove it
- LineNumber g_Line;
- uint8_t g_Pos;
- Page g_Page;
+FILE PrintF_WR_Stream;
+// a glopal LCD pointer and neceeay parameters to be used any where in the project
+//_Global variables definitions
+LCD_HD44780 *LCD_Ptr = nullptr; // don't remove it
+LineNumber g_Line = Line_1;
+uint8_t g_Pos = 1;
+Page g_Page = Page_1;
 
 /**
  * @brief Initialize and new LCDobject
@@ -102,9 +103,9 @@ LCD_HD44780::LCD_HD44780(
   //! These are global variabled declared on the top of the page
   // global pointer to the lcd object to use it any where
   LCD_Ptr = this;
-  g_Line = Line_1;
-  g_Pos = 1;
-  g_Page = Page_1;
+  // g_Line = Line_1;
+  // g_Pos = 1;
+  // g_Page = Page_1;
   //_***************************************************** End of setup  globals********************************************************_/
 }
 
@@ -115,21 +116,21 @@ void LCD_HD44780::LCD_Show_Number(num_Type nty, const char *fmt, uint8_t loc, Li
   {
   case I_type:
     snprintf(strStream, sizeof(strStream), fmt, num_Value.Ln_value);
-    //LCD_SHOW_String(strStream, loc, ln,page ); //(strStream, g_Pos, g_Line, g_Page);
-    // return;
+    // LCD_SHOW_String(strStream, loc, ln,page ); //(strStream, g_Pos, g_Line, g_Page);
+    //  return;
     break;
 
   case F_type:
     snprintf(strStream, sizeof(strStream), fmt, num_Value.Fn_value); //
-    //LCD_SHOW_String(strStream, g_Pos, g_Line, g_Page);
-    //return;
+    // LCD_SHOW_String(strStream, g_Pos, g_Line, g_Page);
+    // return;
     break;
   case D_type:
     snprintf(strStream, sizeof(strStream), fmt, num_Value.Dn_value);
-    //LCD_SHOW_String(strStream, g_Pos, g_Line, g_Page);
-    //return;
+    // LCD_SHOW_String(strStream, g_Pos, g_Line, g_Page);
+    // return;
     break;
-   // default:
+    // default:
     //  LCD_SHOW_String(strStream,g_Pos,g_Line,g_Page);
     //  break;
   }
@@ -243,7 +244,7 @@ void LCD_HD44780::WriteCommand(volatile unsigned char cmd)
 {
   // WaitForBussyFlag();
   *pReigisterSelPort &= ~(1 << RegisterSelpin); // make RS =0 to write to command register of the LCD
-  Writing_LCD(cmd);
+  Write_Byte_LCD(cmd);
   // for (char x =0;x<=3;x++)
   _delay_us(500); //(4500);//(200); //!(COMMAND_DELAY);*/
 }
@@ -254,14 +255,14 @@ void LCD_HD44780::WriteData(char data)
 {
   // 	WaitBussyFlag();
   *pReigisterSelPort |= 1 << RegisterSelpin; // make RS=1  to write to the Data register of the LCD
-  Writing_LCD(data);
+  Write_Byte_LCD(data);
   // Dissabled for test  in 4-1-2023*/    WaitForBussyFlag();
   _delay_us(300); //(4500);//(100);  //!_delay_ms(COMMAND_DELAY);
 }
 
 /// @brief Write single Byte to the LCD module
 /// @param argu
-void LCD_HD44780::Writing_LCD(char argu)
+void LCD_HD44780::Write_Byte_LCD(char argu)
 {
 
   // The LCD hardware writes the upper nible 1st then Write the lower nibble
@@ -368,7 +369,45 @@ void LCD_HD44780::LCD_SetPosition(uint8_t charPosition, LineNumber charlineNumbe
 
 void LCD_HD44780::LCD_Clear()
 {
-  WriteCommand(LCD_CLEAR);
+   //WriteCommand(LCD_CLEAR);
+g_Pos=1;
+g_Line=Line_1;
+printf("               ");
+g_Line=Line_2;
+printf("               ");
+g_Line=Line_1;
+g_Pos=1;
+// g_Pos = 1;
+// g_Line = Line_1;
+//
+//{
+//  for (uint8_t i = 0; i < 17; i++)
+//{
+//  //LCD_Ptr->LCD_Show_Character(' ', g_Pos, g_Line, g_Page);
+//
+//  printf(" ");
+//  Wink_Led2();
+//}
+//}
+
+//g_Pos = 1;
+//for (uint8_t i = 0; i < 32; i++)
+//{
+//  //LCD_Ptr->LCD_Show_Character(' ', g_Pos, g_Line, g_Page);
+//
+//  if (g_Pos == 17)
+//  {
+//    g_Line = Line_2;
+//    //already set in writebyteToStdout fun when g_Pos > 16 also incremented in the same function
+//    //g_Pos = 1;
+//  Wink_Led2();
+//  }
+//  printf(" ");
+//  Wink_Led2();
+//}
+//g_Line = Line_1;
+//g_Pos = 1;
+ 
 }
 
 /// @brief Show the Required Page 1,2,or 3( This function used to display the required page 1,2, or 3  it works fine on page 1 and 2, but page 3 is in accurate because the sreen is    shared between Page 1 and page 3)

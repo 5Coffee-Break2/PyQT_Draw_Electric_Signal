@@ -103,8 +103,8 @@ class Serial_Model:
     
     
     def Send_Number(self,ntype,n_val):
-        if ntype == pyAvrSer.Atmega_USART.SOB_I_By:
-            self.__active_Serial_Port__.Send_Int(n_val)
+        self.__active_Serial_Port__.Send_Number(ntype,n_val) 
+        
     
     def Refresh_Active_Port(self):
         """Refresh and reset the active opened port"""

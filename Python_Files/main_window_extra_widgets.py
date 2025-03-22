@@ -20,7 +20,7 @@ class MainWindowExtraWidgets:
         self.debug_label_DB1.setGeometry(20,450,400,30)
         self.parent.layout().addWidget(self.debug_label_DB1)    
         
-        self.close_btn.setGeometry(20,500,150,24)
+        self.close_btn.setGeometry(20,580,150,24)
         self.parent.layout().addWidget(self.close_btn)
         
     

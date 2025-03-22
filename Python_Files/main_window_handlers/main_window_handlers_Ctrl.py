@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QListWidgetItem, QMainWindow
 from PyQt6.QtCore import QThread
 from Draw_Electrical_signal_MApp import MainWindow,Ui_MainWindow
 from App_Serial_Port import pyqt_ser_comm_thread
+
 from Progress_Bar_Thread.rx_progress_bar import *#CProgess_Bar_Thread,Progress_Bar_Worker
 from Matplot_Files.Matplot_Window import Matplot_Window
 import csv
@@ -32,6 +33,17 @@ class Main_Wind_Handlers:
         self.plot_thrd  = None  #-self.plot_thrd = pyqt_ser_comm_thread.Display_A_Curve_Thread(None,self.app_serPrt_model,None)
         self.mpl3_lines=None 
     
+    def oNSend_Number_Clk(self,btn_evt)-> None:
+        snd_num_str:str = self.main_Wind_Ui.send_num_EdtWdg.text()
+        snd_num_typ:bytes = None
+        if (snd_num_str.__contains__('.')) and (snd_num_str.replace('.','').isnumeric()):
+           snd_num_typ = sm.pyAvrSer.Atmega_USART.SOB_F_By
+        elif snd_num_str.isnumeric():
+            snd_num_typ = sm.pyAvrSer.Atmega_USART.SOB_I_By
+        self.app_serPrt_model.Get_Active_Port().flush()     #reset_output_buffer()
+        self.app_serPrt_model.Send_Number(snd_num_typ,snd_num_str)
+        
+        
     def onNumber_Received(self,num):
         self.main_Wind_Ui.data_rxed_prgBar.setValue(self.app_serPrt_model.Get_Rxed_Bytes_Count)
         #ic(num)
@@ -72,6 +84,7 @@ class Main_Wind_Handlers:
         self.mpl3_widget.mpl_widget.mpl_Axes.grid()
         # self.mpl3_lines = self.mpl3_widget.mpl_widget.mpl_Axes.plot(self.app_serPrt_model.rx_Times_Buffer,self.app_serPrt_model.rx_Voltages_Buffer) 
         # self.mpl3_widget.mpl_widget.Setup_Cursor() 
+    
     def Receive_Data_Thrid_Instantly(self):
         """_summary_
             This function is used to receive data from the serial port instantly
@@ -323,7 +336,7 @@ class Main_Wind_Handlers:
        
        #_ ic("Timer event started")
         #-self.Receive_All_Data_and_Run()  
-        self.Receive_Data_Immediately()         
+        #__TMP_DISABLED     self.Receive_Data_Immediately()         
         #self.Receive_Data_Thrid_Instantly()
     
     def onSer_Thread_Started(self,evt_ob):
@@ -412,7 +425,7 @@ class Main_Wind_Handlers:
             if self.app_serPrt_model.Is_Active_Port_Opend():
                 self.App_Serial_Port= self.app_serPrt_model.Get_Active_Port()
                 self.main_Wind_Ui.ser_Port_Info_LabCrl.setText(self.app_serPrt_model.Get_Active_Port_info())
-                self.main_Wind.rx_Timer.start()
+            #_TEMP_diSABLED__    self.main_Wind.rx_Timer.start()
     
     
     def Get_Received_Data(self, disab_btn: gm.QtWidgets.QPushButton = None):

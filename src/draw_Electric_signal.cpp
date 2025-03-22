@@ -6,6 +6,8 @@
 #define PRE_SCALE 8.0
 // #define CONV_DELAY 0.5 // in milisecond
 //-------------====== setting for tha app =======--------------------------------//
+#define ENABLE_TX 0
+#define ENABLE_RX 1
 
 #define CHRGING_PIN 0
 #define CHARGING_PORT_DDR DDRB
@@ -37,12 +39,7 @@ void Transmit_Charge_Discharge_Data();
 #include "LCDHD44780_AVRLib.hpp"
 
 #endif
-// global variables to deal with the LCD defined and initialized in the USART source file
-// LCD_HD44780 *TLCD_ptr;
-//!extern LCD_HD44780 *LCD_ptr;
-//!extern LineNumber g_Line;
-//!extern uint8_t g_Pos;
-//!extern Page g_Page;
+//_==============================================================================================================================_//
 #if GET_REAL_TIME == 1
 //---------------=========== Extern Global variables ============---------------//
 extern volatile float current_Time;
@@ -63,6 +60,40 @@ volatile float getting_time = 0.0f;
 volatile int float_Nums_Count = 0;
 volatile int int_Nums_Count = 0;
 bool charging_completed = false;
+ float f_val = 0.0;
+ long l_val = 0;
+ void Disp_Received_Data ()
+{
+
+  LCD_Ptr->LCD_Clear();
+  //g_Line = Line_1;
+ //-if (mSerPtr->rxed_Number_Type==(SOB_F) )
+ //-{
+ //-  g_Pos = 1;
+ //-  mSerPtr->Get_Rxed_F_Num(f_val) ;
+ //-      printf("%f", (double)f_val);
+ //-  g_Pos=1;
+ //-      g_Line = Line_2;
+ //-  printf("F:%d", mSerPtr->Get_Rxed_Nums_Count(SOB_F));
+ //-}
+  
+  //if(mSerPtr->Get_Rxed_Nums_Count(SOB_I) > 0)
+  if (mSerPtr->rxed_Number_Type == (SOB_I))
+  {
+    g_Pos = 1;
+    mSerPtr->Get_Rxed_L_Num(l_val);
+        printf("%ld", l_val);
+    g_Pos = 1;
+    g_Line = Line_2;
+    printf("I:%d", mSerPtr->Get_Rxed_Nums_Count(SOB_I));
+  }
+
+  //else
+  //{
+  //  g_Pos = 1;
+  //  printf("No Data Rxed");
+  //}  
+}
 
 int main()
 {
@@ -70,8 +101,8 @@ int main()
   // DDRD &= ~(1 << PD4);
   
   ATMG8A_USART mSerial_Port(BAUD_RATE, true, true);
-  Atmega8Timer2 mTimer(true, false);
-  timerPtr = &mTimer;
+  //! TMP_DISSABED Atmega8Timer2 mTimer(true, false);
+  //! TMP_DISSABED timerPtr = &mTimer;
   ADC_Cls mADC(PC5);
   ADC_ptr = &mADC;
   // long rxed_lng = 0;
@@ -92,8 +123,9 @@ int main()
   //!g_Line = Line_2;
   //!printf("I:%d  F:%f", 9, 12.236);
   //!g_Line = Line_1;
+  //printf("Ready Rx Msg");
 #endif
-
+//unsigned char rx_ch = '0';
   // Wink_Led3(90000);
   while (1)
   {
@@ -104,7 +136,28 @@ int main()
 
     // my_Delay_Fn(50000);
     _delay_ms(300);
-
+    
+    #if ENABLE_RX == 1
+    //-if (mSerPtr->new_Data_Received_Flag)
+    //-{
+    //-//  LCD_Ptr->LCD_Clear();
+    //-mSerPtr->Get_Rxed_F_Num(f_val);
+    //-g_Pos = 1;
+    //-g_Line = Line_2;
+    //-printf("%f", (double)f_val);
+    //-  mSerPtr->new_Data_Received_Flag = false;
+    //-  
+    //-}
+    if (mSerPtr->new_Data_Received_Flag)
+    {
+      Disp_Received_Data();
+      mSerPtr->new_Data_Received_Flag = false;
+    }
+    
+    #endif
+  
+  #if ENABLE_TX == 1
+    
     if (!(PINC & (1 << PC4)))
     {
       //- if(disccharge_cmd)
@@ -125,6 +178,7 @@ int main()
         Transmit_Charge_Discharge_Data();
       }
     }
+    #endif
   }
 }
 
@@ -149,7 +203,7 @@ ISR(TIMER2_OVF_vect)
   sei();
 }
 #endif
-
+#if ENABLE_TX == 1
 void Transmit_Charge_Discharge_Data()
 {
   LCD_Ptr->LCD_Clear();
@@ -263,3 +317,4 @@ conv_result = 0;
  printf("T %f",(double)current_Time);
  
 }
+#endif
