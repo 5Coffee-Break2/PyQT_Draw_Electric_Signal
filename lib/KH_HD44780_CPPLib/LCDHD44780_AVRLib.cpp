@@ -10,10 +10,11 @@
 #include "LCD-HD44780Commands.hpp"
 // include <AVR_ExternalInterrupts.hpp>
 #include "KH_Atmega8.hpp"
-//_#include "Global_Stufs.hpp"
-
-// redirect the standard output stream with a custom user defined stream
-// For definig an output stream to be used by printf function
+#include "Global_Stufs.hpp"
+#include "string.h"
+// char strStreambuff[18]; // a global buffer used byprintf and sprintf functions
+//  redirect the standard output stream with a custom user defined stream
+//  For definig an output stream to be used by printf function
 int WriteByteToStdout(char u8Data, FILE *stream);
 FILE PrintF_WR_Stream;
 // a glopal LCD pointer and neceeay parameters to be used any where in the project
@@ -57,7 +58,8 @@ LCD_HD44780::LCD_HD44780(
     volatile unsigned char *ReWrPrt)
 {
   // #if USE_SPRINTF == 1
-  strStream[17] = {'\0'};
+  // strStreambuff[18] = {'\0'};
+
   // #endif
   // f_Width =1;
   // f_Precesion = 4;
@@ -96,7 +98,7 @@ LCD_HD44780::LCD_HD44780(
 #if USE_PRINTF == 1
   PrintF_WR_Stream.put = WriteByteToStdout;
   PrintF_WR_Stream.flags = _FDEV_SETUP_WRITE;
-  PrintF_WR_Stream.buf = strStream;
+  // PrintF_WR_Stream.buf = strStreambuff;
   stdout = &PrintF_WR_Stream;
 #endif
   // Initialize the required parametters for displaying data on the LCD
@@ -107,8 +109,144 @@ LCD_HD44780::LCD_HD44780(
   // g_Pos = 1;
   // g_Page = Page_1;
   //_***************************************************** End of setup  globals********************************************************_/
+  Display_buffer[16] = {Pos_Status()}; // Initialize the display buffer to zero
 }
+//!!!!!!!!!!!! for test /////////////////
+// Structure to represent a position on the LCD.
+//-struct LCD_HD44780::Position
+//-{
+//-  uint8_t col;
+//-  uint8_t row;//-
 
+//-        // Overload the == operator for comparing positions.  Important for using in the set.
+//-      bool
+//-      operator==(const Position &other) const
+//-  {
+//-    return (col == other.col && row == other.row);
+//-  }//-
+
+//-  // Overload the < operator.  This is required for using Position as key in std::set.
+//-  bool operator<(const Position &other) const
+//-  {
+//-    if (row != other.row)
+//-    {
+//-      return row < other.row;
+//-    }
+//-    else
+//-    {
+//-      return col < other.col;
+//-    }
+//-  }
+//-};
+
+/// @brief Function to manage the dispalyed data on the LCD to not be overlapped
+/// @details This function will check the display buffer for the current position and clear the previous data on the display
+/// @param col_ :is the next location after the end of the current displayed data on the display
+/// @param row_ :: is the current line number of the display
+/// @return void
+void LCD_HD44780::ManageDisplay(uint8_t ml, uint8_t col_, uint8_t row_)
+{
+  uint8_t last_char_indx = col_ - 1;
+
+  uint8_t prev_char_location = col_ - ml - 1; // col_ - ml - 1;
+  uint8_t prev_char_ind = prev_char_location - 1;
+  // upfate after the last character on the display
+if(row_== Line_1)
+ { 
+  while (Display_buffer[last_char_indx].row_1_equpied && col_ < 17)
+  {
+    //! Clear the previous number location on the display and update the display buffer
+    //! the LCD_Display_Character function update the display buffer automatically when displaying a chatacter on thre display
+    LCD_Display_Character(' ', col_, (LineNumber)row_);
+    last_char_indx++;
+    col_++;
+  }
+  // updatebefore the first character on the display
+  while (prev_char_ind > -1 && Display_buffer[prev_char_ind].row_1_equpied)
+  {
+    //! Clear the previous numbers locations on the display and update the display buffer
+    //! the LCD_Display_Character function update the display buffer automatically when displaying a chatacter on thre display
+    LCD_Display_Character(' ', prev_char_location, (LineNumber)row_);
+    prev_char_ind--;
+    prev_char_location--;
+    // Wink_Led2();
+  }
+}
+else
+{
+  while (Display_buffer[last_char_indx].row_2_equpied && col_ < 17)
+  {
+    //! Clear the previous number location on the display and update the display buffer
+    //! the LCD_Display_Character function update the display buffer automatically when displaying a chatacter on thre display
+    LCD_Display_Character(' ', col_, (LineNumber)row_);
+    last_char_indx++;
+    col_++;
+  }
+  // updatebefore the first character on the display
+  while (prev_char_ind > -1 && Display_buffer[prev_char_ind].row_2_equpied)
+  {
+    //! Clear the previous numbers locations on the display and update the display buffer
+    //! the LCD_Display_Character function update the display buffer automatically when displaying a chatacter on thre display
+    LCD_Display_Character(' ', prev_char_location, (LineNumber)row_);
+    prev_char_ind--;
+    prev_char_location--;
+    // Wink_Led2();
+  }
+}
+}
+//! working Function to display a string on the LCD and managethe displ
+//--__uint8_t LCD_HD44780::LCD_SHOW_String(const char strArr[], uint8_t x, LineNumber ln, Page pn)
+//--__{
+//--__  dataRoom = 0;
+//--__  const char *strPtr = strArr;
+//--__  uint8_t ml = strlen(strArr); // get the string length
+//--__  Position pos; // Create a Position object for the current position
+//--__  uint8_t tpos = 0; // temp position to be used for the current position
+//--__  //  if (x > 16)
+//--__  //-Position((uint8_t)(x+(uint8_t)pn), (uint8_t)ln); // Create a Position object for the current position
+//--__      //  if (x > 16)
+//--__      do
+//--__  {
+//--__    tpos = x + pn; // get the current position
+//--__    //-pos.col = tpos; // set the column position
+//--__    LCD_SetPosition(tpos, ln);
+//--__    WriteData(*strPtr++);
+//--__    pos.row = ln; // set the row position
+//--__    pos.col = tpos; // set the column position
+//--__    Display_buffer[dataRoom] = pos; // store the current position in the buffer
+//--__    //-Display_buffer[dataRoom] = pos; // store the current position in the buffer
+//--__    //-pos.row = ln; // set the row position
+//--__    dataRoom += 1;
+//--__
+//--__    x++;
+//--__    if (x > 16)
+//--__    {
+//--__      x = 1;
+//--__      dataRoom = 0; // reset the data room index
+//--__      //ln = (ln == Line_1) ? Line_2 : Line_1; // toggle the line number
+//--__    }
+//--__  }
+//--__
+//--__  while (*strPtr != '\0');
+//--__  while (Display_buffer[dataRoom].col != 0)
+//--__  {
+//--__    //clarr the postion on the display
+//--__    WriteData(' '); // clear the position in the buffer");
+//--__    //ypdate the display buffer
+//--__    Display_buffer[dataRoom].col = 0; // clear the position in the buffer
+//--__    dataRoom += 1;
+//--__    // set the index to the next postion
+//--__    LCD_SetPosition(Display_buffer[dataRoom].col, (LineNumber)Display_buffer[dataRoom].row); // set the position to be cleared
+//--__  } // check if the position is occupied then clear it
+//--__  if (pn != currentPage)
+//--__  {
+//--__    LCD_ShowPage(pn);
+//--__    //   currentPage= pn;
+//--__  }
+//--__  //      str[0]='\0';  //* clear the buffer for the next use
+//--__  return  ml;//-dataRoom;
+//--__}
+//!!!!!!!!!!!! for test /////////////////
 #if USE_SPRINTF == 1
 void LCD_HD44780::LCD_Show_Number(num_Type nty, const char *fmt, uint8_t loc, LineNumber ln, Page page)
 {
@@ -369,45 +507,50 @@ void LCD_HD44780::LCD_SetPosition(uint8_t charPosition, LineNumber charlineNumbe
 
 void LCD_HD44780::LCD_Clear()
 {
-   //WriteCommand(LCD_CLEAR);
-g_Pos=1;
-g_Line=Line_1;
-printf("               ");
-g_Line=Line_2;
-printf("               ");
-g_Line=Line_1;
-g_Pos=1;
-// g_Pos = 1;
-// g_Line = Line_1;
-//
-//{
-//  for (uint8_t i = 0; i < 17; i++)
-//{
-//  //LCD_Ptr->LCD_Show_Character(' ', g_Pos, g_Line, g_Page);
-//
-//  printf(" ");
-//  Wink_Led2();
-//}
-//}
+#if USE_PRINTF == 0
+  WriteCommand(LCD_CLEAR);
+#endif
+#if USE_PRINTF == 1
+  g_Line = Line_1;
+  g_Pos = 1;
+  // string length = 16 character;
+  printf("                ");
+  g_Pos = 1;
+  g_Line = Line_2;
+  printf("                ");
+  g_Line = Line_1;
+  g_Pos = 1;
+#endif
+  // g_Pos = 1;
+  // g_Line = Line_1;
+  //
+  //{
+  //  for (uint8_t i = 0; i < 17; i++)
+  //{
+  //  //LCD_Ptr->LCD_Display_Character(' ', g_Pos, g_Line, g_Page);
+  //
+  //  printf(" ");
+  //  Wink_Led2();
+  //}
+  //}
 
-//g_Pos = 1;
-//for (uint8_t i = 0; i < 32; i++)
-//{
-//  //LCD_Ptr->LCD_Show_Character(' ', g_Pos, g_Line, g_Page);
-//
-//  if (g_Pos == 17)
-//  {
-//    g_Line = Line_2;
-//    //already set in writebyteToStdout fun when g_Pos > 16 also incremented in the same function
-//    //g_Pos = 1;
-//  Wink_Led2();
-//  }
-//  printf(" ");
-//  Wink_Led2();
-//}
-//g_Line = Line_1;
-//g_Pos = 1;
- 
+  // g_Pos = 1;
+  // for (uint8_t i = 0; i < 32; i++)
+  //{
+  //   //LCD_Ptr->LCD_Display_Character(' ', g_Pos, g_Line, g_Page);
+  //
+  //   if (g_Pos == 17)
+  //   {
+  //     g_Line = Line_2;
+  //     //already set in writebyteToStdout fun when g_Pos > 16 also incremented in the same function
+  //     //g_Pos = 1;
+  //   Wink_Led2();
+  //   }
+  //   printf(" ");
+  //   Wink_Led2();
+  // }
+  // g_Line = Line_1;
+  // g_Pos = 1;
 }
 
 /// @brief Show the Required Page 1,2,or 3( This function used to display the required page 1,2, or 3  it works fine on page 1 and 2, but page 3 is in accurate because the sreen is    shared between Page 1 and page 3)
@@ -462,10 +605,34 @@ void LCD_HD44780::LCD_ShowPage(Page page_num)
  * @param l: Line number (1 or 2)
  * @param d: Character to be write
  */
-void LCD_HD44780::LCD_Show_Character(char d, uint8_t x, LineNumber l, Page p)
+void LCD_HD44780::LCD_Display_Character(char d, uint8_t x, LineNumber ln, Page p)
 {
-  LCD_SetPosition((x + p), l);
+  uint8_t tp = x + p;
+  // uint8_t tindx = tp - 1; // get the index of the display buffer to be updated
+  LCD_SetPosition(tp, ln);
   WriteData(d);
+  // set the buffer index to the current position
+  tp--;
+  // update th e display buffer with the new equiped postion and line number
+  // if line  is line 1
+  Display_buffer[tp].row_num = ln; // set the row number to be used in the display buffer
+  
+  if (ln == Line_1)
+  {
+     if (d != ' ')
+      Display_buffer[tp].row_1_equpied = true; // set the column position  equpied
+    else
+      Display_buffer[tp].row_1_equpied = false; // set the column position not equpied
+  }
+  // if line  is line 2
+  else
+{
+    if (d != ' ')
+      Display_buffer[tp].row_2_equpied = true; // set the column position equpied
+    else
+      Display_buffer[tp].row_2_equpied = false; // set the column position not equpied
+  }
+
   if (p != currentPage)
   {
     LCD_ShowPage(p);
@@ -586,15 +753,19 @@ The dtostre() function returns the pointer to the converted string s.
  */
 int WriteByteToStdout(char u8Data, FILE *stream) //(char u8Data, __file *stream)//int  ATMG8A_USART::USART_SendByte(char u8Data, FILE *stream)
 {
-  uint8_t wz = g_Pos;
 
-  if (g_Pos > 16)
+  LCD_Ptr->LCD_Display_Character(u8Data, g_Pos, g_Line, g_Page); // display the character on the LCD
+                                                                 // // LCD_Ptr->LCD_Display_Character(u8Data, g_Pos, g_Line, g_Page); // display the character on the LCD
+  g_Pos++;
+  // LCD_Ptr-> Postion pos =(g_Pos,g_Line) ;                   // set the row position
+  // pos.col = tpos;                 // set the column position
+  // Display_buffer[dataRoom] = pos; // store the current position
+  if (g_Pos > 17)
+  {
     g_Pos = 1;
-  LCD_Ptr->LCD_Show_Character(u8Data, g_Pos, g_Line, g_Page);
-  g_Pos += 1;
-  return g_Pos - wz;
+  }
+  return 0; // return the count of displayed characters
 }
-
 // void writeLCD(FILE *fp, const int numOfChars, ...)
 // {
 //    va_list ap;

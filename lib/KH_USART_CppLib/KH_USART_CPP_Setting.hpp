@@ -1,7 +1,21 @@
 #pragma once
 //@ required delay between series transmission of bytes in micro seconds
 #define SERIES_TX_DELAY 100
-//@ may be deleted
+//@ Enable Receive a float number 1/0
+#define ENABLE_FLOAT_RX 0
+//@ Enable Receive a long number 1/0
+#define ENABLE_LONG_RX 1
+//@ Enable Receive a string 1/0
+#define ENABLE_STRING_RX 1
+//@ Enable Transmit a float number 1/0
+#define ENABLE_FLOAT_TX 1
+//@ Enable Transmit a long number 1/0
+#define ENABLE_LONG_TX 1
+//@ Enable Transmit a string 1/0
+#define ENABLE_STRING_TX 0
+
+
+//@ USE extra buffers to store the received data a definite buffer for each data type
 #define USE_TX_RX_BUFFERS 1
 //@ To Enable/Disable using function template 1/0
 #define USE_TX_FUNCTION_TEMPLATE 0
@@ -64,6 +78,13 @@
             #endif       
     #endif
 
+//@Dissable Rx interrupt and dissable Tx interrupt 
+#if USE_USART_INTERRUPTS == 0
+    //@Dissable RXC interrupt for receiving data
+    #define USE_RX_INTERRUPT 0
+    //@ Dissable Tx interrupts routines for transmitting data
+    #define USE_TX_INTERRUPT 0
+#endif
 
 //@Define the required Baud rate
  #ifndef BAUD_RATE

@@ -33,6 +33,14 @@ class Main_Wind_Handlers:
         self.plot_thrd  = None  #-self.plot_thrd = pyqt_ser_comm_thread.Display_A_Curve_Thread(None,self.app_serPrt_model,None)
         self.mpl3_lines=None 
     
+    def onSend_Command(self,btn_evt):
+        snd_cmd_str:str = self.main_Wind_Ui.send_num_EdtWdg.text()
+        self.app_serPrt_model.Get_Active_Port().flush()     #reset_output_buffer()
+        self.app_serPrt_model.Send_Message(snd_cmd_str)
+        ic(snd_cmd_str,"Command sent")
+        #self.app_serPrt_model.Send_Command(snd_cmd_str)
+       
+    
     def oNSend_Number_Clk(self,btn_evt)-> None:
         snd_num_str:str = self.main_Wind_Ui.send_num_EdtWdg.text()
         snd_num_typ:bytes = None

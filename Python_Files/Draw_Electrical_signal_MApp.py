@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
         self.ma_Window.dispaly_Rx_Data_Btn.clicked.connect((self.ma_Window_Handlers.onDisplayCurve))
         self.ma_Window.calculate_Rx_Data_Diff_Btn.clicked.connect(self.ma_Window_Handlers.onCalculate_Rx_diffeerence)
         self.ma_Window.pushButton.clicked.connect(self.ma_Window_Handlers.oNSend_Number_Clk) #self.ma_Window.data_rxed_prgBar.valueChanged.connect(self.onProgressBar)
-    
+        self.ma_Window.send_command_Btn.clicked.connect(self.ma_Window_Handlers.onSend_Command)
     #def oNhandleFinished(self):
     #    self.ma_Window.read_Rx_Data_Btn.setText('Start')
     #    self.progress_Bar_Thread.quit()

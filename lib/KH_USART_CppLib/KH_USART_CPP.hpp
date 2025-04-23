@@ -10,7 +10,8 @@
 
 #include <KH_USART_CPP_Setting.hpp>
 #include <stdio.h>
-
+#include <stdlib.h>
+#include <string.h>
 //-#include <stdarg.h>
 
 // end char pointer used with strtod function
@@ -36,73 +37,107 @@ private:
   //. uint8_t Detect_Sign(char,unsigned char ** );
   // uint8_t Detect_Sign(unsigned char** ptr);
   // if enabled using buffers to store the received data
+  uint8_t prev_MsgLength ;
 #if (USE_TX_RX_BUFFERS == 1)
-  float float_Nums_Buffer[EXT_F_BUFF_SIZE];
-  long long_Nums_Buffer[EXT_L_BUFF_SIZE];
-  unsigned char string_Buffer[EXT_S_BUFF_SIZE];
-  
-  volatile float * float_Nums_Buffer_Ptr;
-  volatile long * long_Nums_Buffer_Ptr;
-  volatile unsigned char * string_Buffer_Ptr;
-  
+#if ENABLE_FLOAT_RX == 1
+      float float_Nums_Buffer[EXT_F_BUFF_SIZE];
+  volatile float *float_Nums_Buffer_Ptr;
   // These variables to store the count of the received bytes or characters
-  uint8_t rxed_FNums_Count,
-      rxed_LNums_Count,
-      rxed_String_Count;
+  uint8_t rxed_FNums_Count;
   // indexes to access the current value of the receiver buffers
   int8_t curr_Rx_Float_Buff_Indx,
-      curr_Rx_Long_Buff_Indx,
-      curr_RX_Str_Buff_Indx,
-      read_F_Ptr_Index,
-      read_L_Ptr_Index;
+      current_read_Index_FNum;
+
+#endif
+#if ENABLE_LONG_RX == 1
+  long long_Nums_Buffer[EXT_L_BUFF_SIZE];
+  volatile long *long_Nums_Buffer_Ptr;
+  // These variables to store the count of the received bytes or characters
+  uint8_t rxed_LNums_Count;
+  /// @brief indexes to access the current value of the receiver buffers (location of the last received number)
+  int8_t curr_Rx_Long_Buff_Indx,
+      current_Read_Index_LNum;
+#endif
+
+#if ENABLE_STRING_RX == 1
+  //unsigned char message_Buffer[EXT_S_BUFF_SIZE];
+  volatile unsigned char *message_Buffer_Ptr;
+  // indexes to access the current value of the receiver buffers
+  int8_t curr_RX_Msg_Buff_Indx;
+#endif
+#endif
+  //! rxed_Msg_Length;
+
   //  tmp_Str_Indx;
   // used for calculating if new numbers or string were received and added to the buffer
   uint8_t tmpCnt_F, tmpCnt_L,
       tmpCnt_S;
-  // a flage to indicate if an action executed or not yet
+// a flage to indicate if an action executed or not yet
+#if EXECUTE_AN_ACTION == 1
   bool action_Executed; //, new_Data_Received_Flag;
 #endif
   void Reset_Tx_Rx_Buffer();
   uint8_t Insert_Byte_To_MBuffer(unsigned char);
+#if ENABLE_FLOAT_RX == 1
   bool Insert_Number_To_Float_Buffer(float);
+#endif
+#if ENABLE_LONG_RX == 1
   bool Insert_Number_To_Long_Buffer(long);
-  //bool Insert_Char_To_String_Buffer(unsigned char);
+#endif
+  // bool Insert_Char_To_String_Buffer(unsigned char);
 
 public:
   // int8_t curr_RX_Str_Buff_Indx ;
   // volatile bool EOB_Flag;
   // if enabled using buffers to store the received data
+#if ENABLE_STRING_RX == 1
+  unsigned char message_Buffer[EXT_S_BUFF_SIZE];
+  #endif
+
   bool new_Data_Received_Flag;
-    #if EXECUTE_AN_ACTION == 1
+#if EXECUTE_AN_ACTION == 1
   bool Is_New_Data();
-    #endif
+#endif
 #if (USE_TX_RX_BUFFERS == 1)
-  // read only pointers for refrencing the float,long And string buffers for reading only
+// read only pointers for refrencing the float,long And string buffers for reading only
+#if ENABLE_FLOAT_RX == 1
+  // varibles used to store the recevied numbers and chars
+  volatile float rxed_Float_Number;
   volatile const float *read_F_Nums_Buffer_Ptr;
-  volatile const long *read_L_Nums_Buffer_Ptr;
-  volatile const unsigned char *read_String_Buffer_Ptr;
-  void Reset_Main_Rx_Ptr(unsigned char);
   int8_t Get_Rxed_F_Num(float &fn, uint8_t ind = -1);
-  int8_t Get_Rxed_L_Num(long &ln,uint8_t ind = -1);
-  uint8_t Get_Rxed_Nums_Count(unsigned char);
-  void Reset_Read_Ptr(unsigned char);
-  //_float Read_FNumber_At_Index(uint8_t );
-  //_long Read_LNumber_At_Index(uint8_t indx);
+#endif
+#if ENABLE_LONG_RX == 1
+  /// @brief To Get a long number from the received buffer at the required index (point to the current unread location)
+  volatile const long *read_L_Nums_Buffer_Ptr;
+  int8_t Get_Rxed_L_Num(long &ln, uint8_t ind = -1);
+  // varibles used to store the recevied numbers and chars
+  volatile long rxed_Long_Number;
+#endif
+#if ENABLE_STRING_RX == 1
+  uint8_t rxed_Msg_Length;
+  volatile const unsigned char *read_Message_Buffer_Ptr;
+  // varibles used to store the recevied numbers and chars
+  volatile unsigned char rxed_Char;
 #endif
 
-      // varibles used to store the recevied numbers and chars
-      volatile unsigned char rxed_Char;
-  volatile float rxed_Float_Number;
-  volatile long rxed_Long_Number;
-
-  // variable to hold the type ofthe received number
-  volatile unsigned char rxed_Number_Type;
-
-  volatile int8_t used_Buffer_Size;
+#if ENABLE_FLOAT_RX == 1 || ENABLE_LONG_RX == 1 || ENABLE_STRING_RX == 1
+  uint8_t Get_Rxed_Nums_Count(unsigned char);
+  void Reset_Read_Ptr(unsigned char);
+  void Reset_Main_Rx_Ptr(unsigned char);
+  /// @brief The type of the received data frame (float,long,string)
+  volatile unsigned char rxed_Data_Type;
   volatile bool type_Detected, // a flag for detected data type
       EOB_Flag,                // a flag for receiving a complete block of data numbers or message string
       end_of_Rx_Block,
       end_of_Tx_Block;
+//_float Read_FNumber_At_Index(uint8_t );
+//_long Read_LNumber_At_Index(uint8_t indx);
+#endif
+
+  // variable to hold the type ofthe received number
+
+  volatile int8_t used_Buffer_Size;
+
   // struct status_Flags
   // {
   //    volatile bool type_Detected:1;  // a flag for detected data type
@@ -117,9 +152,15 @@ public:
       transmitted_Chars_Count,
       // also indicate to the index of the next empty buffer location that is ready to store a charcater
       used_Tx_Buffer_Size;
+#if ENABLE_FLOAT_RX == 1 || ENABLE_LONG_RX == 1 || ENABLE_STRING_RX == 1
   // this buffer used for receiving single data block only (float number,long number,string msge)
   unsigned char Rx_Buffer[BUFFER_SIZE];
+  bool Is_Receiveed_Msg_Equal(const char *);
+#endif
+
+#if ENABLE_FLOAT_TX == 1 || ENABLE_LONG_TX == 1 || ENABLE_STRING_TX == 1
   unsigned char Tx_Buffer[BUFFER_SIZE];
+#endif
 
   /// @brief  Buffer for Transmitted Data
   // void Clear_TX_Buffer();
@@ -187,57 +228,6 @@ public:
   // void USART_Setup_Interrupt(bool DataREmpty, bool Tx_intr,bool Rx_Intr);
   void USART_Setup_Interrupt(bool rxc = false, bool dre = false, bool txc = false);
 #endif
-
-  //> Transmit sighned long int
-  //! void Transmit_long(long value);
-  //> Transmit float number
-  //! void Transmit_Float(float fval,int8_t nw ,uint8_t np);
-  //> Transmit a string message
-
-  //! void Transmit_Message(unsigned char *);
-  //> Receive a float number (under setup)
-  // float Receive_Flaot_Num( );
-  //> Receive a float number (under setup)
-  //! long Receive_Int_Num( );
-  //! double Receive_Float_Num( );// receive float number
-  //! double Receive_Float_Num_1( );
-
-  //  float CustomStrtoF(const char *str);
-  //  char * dtoa(char *s, double n);
-  //  char* floatToString(float num);
-  //  bool Send_Big_Float(float );
-  // under setup
-
-  //! void Reset_Main_Rx_Ptr(unsigned char );
-  //!     bool Get_Rxed_F_Num(float &);
-  //!     bool Get_Rxed_L_Num(long &);
-  //! uint8_t Get_Rxed_Nums_Count(unsigned char );
-  // read only Tx buffer pointer
-
-  // Under test
-  //    bool Transmit_Byte (uint8_t & );
-  //    bool Receive_Byte (uint8_t &);
-  //    char Data_Received();
-  //
-  //
-  //
-  //
-  //    ///@brief This Function is used to send Unsigned int value on serial communication
-  //    ///@param Unsigned Int value to be send
-  //      void Send_Int(int );  //Is used to send unsigned int value
-  //      bool Receive_Int(int & rx_int);
-  //  //  int GetInt();
-  //
-  //  // void Send_Float(float& );  //Is used to send unsigned int value
-  // //   bool Receive_float(float & rx_int);
-  // //  void breakDown (float member);// breakDown(int index, unsigned char outbox[], float member);
-  // //   float buildUp();
-  //    void Send_Float_Num(float Float_Num,uint8_t FNum_Width ,uint8_t FNum_Precission);
-  //    bool Receive_Float_Num(float &);
-  //    void Receive_Int_num(int& );
-  //    void Send_Int_Num(int& txn_int);
-  //    //uint8_t Transmit_String(const char strArr[]);
-  //    bool Receive_String();
 };
 
 #if USE_TX_FUNCTION_TEMPLATE == 1
@@ -300,6 +290,8 @@ bool ATMG8A_USART::Send_Nums(const char *fmt, T value)
   end_of_Tx_Block = true;
   return end_of_Tx_Block;
 }
+#endif
+
 #endif
 
 #endif

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>787</width>
-    <height>633</height>
+    <height>702</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -241,7 +241,7 @@
       <x>30</x>
       <y>480</y>
       <width>271</width>
-      <height>81</height>
+      <height>141</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -277,6 +277,19 @@
        <widget class="QLineEdit" name="send_num_EdtWdg"/>
       </item>
      </layout>
+    </widget>
+    <widget class="QPushButton" name="send_command_Btn">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>90</y>
+       <width>93</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Send Command</string>
+     </property>
     </widget>
    </widget>
   </widget>

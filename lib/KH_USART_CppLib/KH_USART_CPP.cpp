@@ -4,7 +4,7 @@
 #include "Global_Stufs.hpp"
 // #include <avr/interrupt.h>
 #include "util/delay.h"
-#include <stdlib.h>
+
 // #include <stdio.h>
 #include "LCDHD44780_AVRLib.hpp"
 
@@ -23,33 +23,44 @@ ATMG8A_USART::ATMG8A_USART(unsigned long ubrr, bool en_tx, bool en_rx)
   //  EOB_Flag = false;
 
   mSerPtr = this;
-
+  prev_MsgLength = 0;
 #if (USE_TX_RX_BUFFERS == 1)
-
-  float_Nums_Buffer[EXT_F_BUFF_SIZE] = {'\0'};
-  long_Nums_Buffer[EXT_L_BUFF_SIZE] = {'\0'};
-  string_Buffer[EXT_S_BUFF_SIZE] = {'\0'};
-
+#if ENABLE_FLOAT_RX == 1
+      float_Nums_Buffer[EXT_F_BUFF_SIZE] = {'\0'};
   // Private pointers  for refrencing the float and the float buffers
   float_Nums_Buffer_Ptr = float_Nums_Buffer;
-  long_Nums_Buffer_Ptr = long_Nums_Buffer;
-  string_Buffer_Ptr = string_Buffer;
-
-  // for read only
   read_F_Nums_Buffer_Ptr = float_Nums_Buffer;
-  read_L_Nums_Buffer_Ptr = long_Nums_Buffer;
-  read_String_Buffer_Ptr = string_Buffer;
-
+  rxed_FNums_Count = 0;
+  current_read_Index_FNum = 0; //= -1;
+                               // Initalize the received numbers s used to store the received numbers
+  rxed_Float_Number = 0.0;
   curr_Rx_Float_Buff_Indx = -1;
+#endif
+
+#if ENABLE_LONG_RX == 1
+  long_Nums_Buffer[EXT_L_BUFF_SIZE] = {'\0'};
+  long_Nums_Buffer_Ptr = long_Nums_Buffer;
   curr_Rx_Long_Buff_Indx = -1;
-  curr_RX_Str_Buff_Indx = -1;
-  read_F_Ptr_Index = 0; //= -1;
-  read_L_Ptr_Index = 0; //= -1;
+  rxed_LNums_Count = 0;
+  current_Read_Index_LNum = 0; //= -1;
+  read_L_Nums_Buffer_Ptr = long_Nums_Buffer;
+  // Initalize the received numbers s used to store the received numbers
+  rxed_Long_Number = 0;
+#endif
+
+#if ENABLE_STRING_RX == 1
+  message_Buffer[EXT_S_BUFF_SIZE] = {'\0'};
+  message_Buffer_Ptr = message_Buffer;
+  read_Message_Buffer_Ptr = message_Buffer;
+  rxed_Msg_Length = 0;
+  curr_RX_Msg_Buff_Indx = -1;
+
+  
+#endif
+  // for read only
+
   //  tmp_Str_Indx = -1;
 
-  rxed_FNums_Count = 0;
-  rxed_LNums_Count = 0;
-  rxed_String_Count = 0;
 #if EXECUTE_AN_ACTION == 1
   tmpCnt_F = 0,
   tmpCnt_L = 0;
@@ -58,11 +69,14 @@ ATMG8A_USART::ATMG8A_USART(unsigned long ubrr, bool en_tx, bool en_rx)
   new_Data_Received_Flag = false;
 
 #endif
-
+#if ENABLE_FLOAT_RX == 1 || ENABLE_LONG_RX == 1 || ENABLE_STRING_RX == 1
   // initialize the Tx\Rx buffers
   Rx_Buffer[BUFFER_SIZE] = {'\0'};
+  rxed_Data_Type = '\0';
+
+#endif
   Tx_Buffer[BUFFER_SIZE] = {'\0'};
-  new_Data_Received_Flag = false;
+  //- new_Data_Received_Flag = false;
   end_of_Tx_Block = false;
   type_Detected = false;
   EOB_Flag = false;
@@ -78,11 +92,6 @@ ATMG8A_USART::ATMG8A_USART(unsigned long ubrr, bool en_tx, bool en_rx)
   Tx_BufferPtr = Tx_Buffer;
   current_Tx_Ch_Ptr = Tx_BufferPtr;
   ;
-
-  // Initalize the received numbers s used to store the received numbers
-  rxed_Float_Number = 0.0;
-  rxed_Long_Number = 0;
-  rxed_Number_Type = '\0';
 
 #define MYUBRR ((F_CPU / (ubrr * 16UL)) - 1) //(((F_CPU / (ubrr * 16UL))) - 1)
                                              // Set the Baud rate
@@ -111,6 +120,19 @@ ATMG8A_USART::ATMG8A_USART(unsigned long ubrr, bool en_tx, bool en_rx)
 #endif
 }
 
+#if ENABLE_FLOAT_RX == 1 || ENABLE_LONG_RX == 1 || ENABLE_STRING_RX == 1
+bool ATMG8A_USART::Is_Receiveed_Msg_Equal(const char *msg)
+{
+  // check if the received message is equal to the required message
+  if (strncmp((const char *)Rx_Buffer, msg, strlen(msg)) == 0)
+  {
+  return true;
+  }
+  return false; 
+}
+
+
+#endif
 //-ATMG8A_USART::~ATMG8A_USART()
 //-{
 //-}
@@ -143,130 +165,154 @@ void ATMG8A_USART::Reset_Tx_Rx_Buffer()
   Rx_Buffer_Ptr = Rx_Buffer;
 }
 
-#if USE_TX_RX_BUFFERS == 1
+#if USE_TX_RX_BUFFERS == 1 && (ENABLE_FLOAT_RX == 1 || ENABLE_LONG_RX == 1 || ENABLE_STRING_RX == 1)
 /// @brief Reset the read pointer of the required buffer to the begining of the buffer
 /// @param pt: pointer type to be reset float,long or string (SOB_F,SOB_I,SOB_S)
 void ATMG8A_USART::Reset_Read_Ptr(unsigned char pt)
 {
+#if ENABLE_FLOAT_RX == 1
   if (pt == SOB_F)
   {
     read_F_Nums_Buffer_Ptr = float_Nums_Buffer;
-    read_F_Ptr_Index = 0;
+    current_read_Index_FNum = 0;
   }
-  else if (pt == SOB_I)
+#endif
+#if ENABLE_LONG_RX == 1
+  if (pt == SOB_I)
   {
     read_L_Nums_Buffer_Ptr = long_Nums_Buffer;
-    read_L_Ptr_Index = 0;
+    current_Read_Index_LNum = 0;
   }
-  else if (SOB_S) // in case of SOB_S
+#endif
+#if ENABLE_STRING_RX == 1
+  if (pt == SOB_S) // in case of SOB_S
   {
-    read_String_Buffer_Ptr = string_Buffer;
-    curr_RX_Str_Buff_Indx = 0;
+    read_Message_Buffer_Ptr = message_Buffer;
+    curr_RX_Msg_Buff_Indx = 0;
   }
+#endif
 }
-
-/// @brief To Get the a stored float number from the float buffer
+#if ENABLE_FLOAT_RX == 1
+/// @brief To Get the a stored float number from the float buffer max value could be stored is 9 digits incluing the decimal point
 ///@param parameter-fn a variable to store the read float number from the float buffer
 /// @return the read number index if the buffer not empty other wise false
 int8_t ATMG8A_USART::Get_Rxed_F_Num(float &fn, uint8_t ind)
 {
   // bool ret_res = false;
-  if (ind > -1 && ind < EXT_F_BUFF_SIZE)
+  // read the number from the buffer at the required index
+  if (ind > -1 && ind < rxed_FNums_Count)
   {
     fn = float_Nums_Buffer[ind];
-    return read_F_Ptr_Index;
+    return current_read_Index_FNum;
   }
-
-  else if (read_F_Ptr_Index <= curr_Rx_Float_Buff_Indx)
+  // read the current number from the buffer pointed by the read pointer
+  else if (current_read_Index_FNum <= rxed_FNums_Count)
   {
     fn = *read_F_Nums_Buffer_Ptr++; //-fn = float_Nums_Buffer[curr_Rx_F_Buff_Indx];
-    return read_F_Ptr_Index++;
+    return current_read_Index_FNum++;
   }
 
   // in case of the buffer read completely  point to the last number
-  else if (read_F_Ptr_Index > curr_Rx_Float_Buff_Indx && curr_Rx_Float_Buff_Indx > -1)
+  else if (current_read_Index_FNum > curr_Rx_Float_Buff_Indx && curr_Rx_Float_Buff_Indx > -1)
   {
     // Reset_Read_Ptr(SOB_F);
     read_F_Nums_Buffer_Ptr = float_Nums_Buffer + curr_Rx_Float_Buff_Indx;
-    read_F_Ptr_Index = curr_Rx_Float_Buff_Indx;
-    return read_F_Ptr_Index;
+    current_read_Index_FNum = curr_Rx_Float_Buff_Indx;
+    return current_read_Index_FNum;
   }
 
   return -1;
 }
-
-/// @brief To Get the a stored long number from the long buffer
+#endif
+#if ENABLE_LONG_RX == 1
+/// @brief To Get the a stored long number from the long buffer max valuc ould be stored 999999999
 ///@param parameter-fn a variable to store the read long number from the long buffer
 /// @return the read number index if the buffer not empty other wise false
 int8_t ATMG8A_USART::Get_Rxed_L_Num(long &ln, uint8_t ind)
 {
-  if (ind > -1 && ind < EXT_L_BUFF_SIZE)
+  if (ind > -1 && ind < rxed_LNums_Count)
   {
     ln = long_Nums_Buffer[ind];
-    return read_L_Ptr_Index;
+    return current_Read_Index_LNum;
   }
 
   // read the current number from the buffer
-  else if (read_L_Ptr_Index <= curr_Rx_Long_Buff_Indx)
+  else if (current_Read_Index_LNum <= curr_Rx_Long_Buff_Indx)
   {
     ln = *read_L_Nums_Buffer_Ptr++; //-ln = long_Nums_Buffer[curr_Rx_L_Buff_Indx];
-    return read_L_Ptr_Index++;
+    return current_Read_Index_LNum++;
   }
   // if the long uufer numbers completly read, point to the last number in the buffer
-  else if (read_L_Ptr_Index > curr_Rx_Long_Buff_Indx && curr_Rx_Long_Buff_Indx > -1)
+  else if (current_Read_Index_LNum > curr_Rx_Long_Buff_Indx && curr_Rx_Long_Buff_Indx > -1)
   {
-    read_L_Ptr_Index = curr_Rx_Long_Buff_Indx;
+    current_Read_Index_LNum = curr_Rx_Long_Buff_Indx;
     read_L_Nums_Buffer_Ptr = long_Nums_Buffer + curr_Rx_Long_Buff_Indx;
     // Reset_Read_Ptr(SOB_I);
-    return read_L_Ptr_Index;
+    return current_Read_Index_LNum;
   }
   return -1;
 }
-
+#endif
+#if ENABLE_FLOAT_RX == 1 || ENABLE_LONG_RX == 1
 /// @brief
 /// @param nty is the type of buffer's numbers (float or long)
 /// @return return the current size of the required buffer
 uint8_t ATMG8A_USART::Get_Rxed_Nums_Count(unsigned char nty)
 {
+#if ENABLE_FLOAT_RX == 1
   if (nty == SOB_F)
     return rxed_FNums_Count;
-  else
+#endif
+#if ENABLE_LONG_RX == 1
+  if (nty == SOB_I)
     return rxed_LNums_Count;
+#endif
+  return 0;
 }
+#endif
 
+#if ENABLE_LONG_RX == 1 || ENABLE_FLOAT_RX == 1 || ENABLE_STRING_RX == 1
 /// @brief Reset the main buffers pointers to store numbers from the begining and over write the existing numbers
 /// @param pt: pointer type to be reset float or long
 void ATMG8A_USART::Reset_Main_Rx_Ptr(unsigned char pt)
 {
-
+#if ENABLE_FLOAT_RX == 1
   if (pt == SOB_F)
   {
     float_Nums_Buffer_Ptr = float_Nums_Buffer;
     read_F_Nums_Buffer_Ptr = float_Nums_Buffer;
     rxed_FNums_Count = 0;
     curr_Rx_Float_Buff_Indx = -1;
-    read_F_Ptr_Index = 0;
+    current_read_Index_FNum = 0;
     tmpCnt_F = 0;
   }
-  else if (pt == SOB_I)
+#endif
+#if ENABLE_LONG_RX == 1
+  if (pt == SOB_I)
   {
     long_Nums_Buffer_Ptr = long_Nums_Buffer;
     read_L_Nums_Buffer_Ptr = long_Nums_Buffer;
     rxed_LNums_Count = 0;
     curr_Rx_Long_Buff_Indx = -1;
-    read_L_Ptr_Index = 0;
+    current_Read_Index_LNum = 0;
     tmpCnt_L = 0;
   }
-  else // in case of SOB_S
+#endif
+#if ENABLE_STRING_RX == 1
+  if (pt == SOB_S) // in case of SOB_S
   {
-    string_Buffer_Ptr = string_Buffer;
-    read_String_Buffer_Ptr = string_Buffer;
-    rxed_String_Count = 0;
-    curr_RX_Str_Buff_Indx = -1;
+    message_Buffer_Ptr = message_Buffer;
+    read_Message_Buffer_Ptr = message_Buffer;
+    rxed_Msg_Length = 0;
+    curr_RX_Msg_Buff_Indx = -1;
     tmpCnt_S = 0;
   }
+#endif
+#if EXECUTE_AN_ACTION == 1
   action_Executed = false;
+#endif
 }
+#endif
 #endif
 
 /// @brief Transmit a char using polling tecnique (thout interrupt)
@@ -370,16 +416,6 @@ uint8_t ATMG8A_USART::Receive_Char()
   // copy the received byte to the Rx buffer and  set the pointer to the current empty rx buffer location (only if data type was detected)
   // *Rx_Buffer_Ptr = UDR;
 
-  //@ If received data type has been detected
-  if ((type_Detected == false) && ((rx_byte == SOB_F) || (rx_byte == SOB_I) || (rx_byte == SOB_S)))
-  {
-
-    rxed_Number_Type = rx_byte; //*Rx_Buffer_Ptr;
-    type_Detected = true;
-    // if the received type was detected it will be re-written in the next reading cause we don't need it any more
-    return used_Rx_Buff_Size;
-  }
-
   //- if the end of receiving data was detected
   // if (*Rx_Buffer_Ptr == EOB && (type_Detected == true))
   if (rx_byte == EOB && (type_Detected == true))
@@ -387,11 +423,49 @@ uint8_t ATMG8A_USART::Receive_Char()
     EOB_Flag = true;
     //> replace EOB with end of number sign (null character '\0') cause python will not send it, for success of number conversion
     // add null termainating charcter to and return the total number of received bytes
-    return Insert_Byte_To_MBuffer('\0');
+     Insert_Byte_To_MBuffer('\0');
+     used_Buffer_Size = strlen((const char *)Rx_Buffer);
+     //_--_!Start New Updating
+     //-uint8_t msg_length = strlen((const char *)mSerPtr->Rx_Buffer);
+     //-// uint8_t diff = 0;
+     //-// uint8_t new_length=msg_length;
+     //-// strcpy((char *)rx_ch_buff, (const char *)mSerPtr->Rx_Buffer);
+     //-if (prev_MsgLength > msg_length)
+     //-{
+     //-  // diff = prev_length - strlen((const char *)mSerPtr->Rx_Buffer);
+//-
+     //-  for (uint8_t i = msg_length; i <= prev_MsgLength; i++)
+     //-  {
+     //-    Rx_Buffer[i] = '\0'; // Clear the buffer after use
+     //-  }
+     //-}
+     //-prev_MsgLength = msg_length; // strlen((const char *)mSerPtr->Rx_Buffer);
+
+     //_ g_Line = Line_1;
+     //_ g_Pos = 1;
+     //_ printf("%s", rx_ch_buff);
+     //_ g_Line = Line_2;
+     //_ g_Pos = 1;
+     //_ printf("%s", mSerPtr->Rx_Buffer);
+     //_--_!End New Updating
   }
+
+  //-Filter the received data type`
+  //@ If received data type has been detected
+  if ((type_Detected == false) && ((rx_byte == SOB_F) || (rx_byte == SOB_I) || (rx_byte == SOB_S)))
+  {
+    type_Detected = true;
+    rxed_Data_Type = rx_byte; //*Rx_Buffer_Ptr;
+   //-                           // if the received type was detected it will be re-written in the next reading cause we don't need it any more
+
+    return used_Rx_Buff_Size;
+  }
+
   //  remaining_tx_size -=1;
   return Insert_Byte_To_MBuffer(rx_byte);
 }
+
+#if ENABLE_FLOAT_RX == 1
 /// @brief  To Add a received float number to the float buffer
 /// @param f_value : the rxeived float number that will be stored in the Rx float numbers buffer
 /// @return
@@ -406,12 +480,13 @@ bool ATMG8A_USART::Insert_Number_To_Float_Buffer(float f_value)
   // in case of overflow
   if (rxed_FNums_Count > EXT_F_BUFF_SIZE)
   {
-    Reset_Main_Rx_Ptr(rxed_Number_Type);
+    Reset_Main_Rx_Ptr(rxed_Data_Type);
   }
   // Rx_Buffer[BUFFER_SIZE] = {'\0'};
   return true;
 }
-
+#endif
+#if ENABLE_LONG_RX == 1
 /// @brief To Add a received long number to the long buffer
 /// @param l_value  : the received long number that will be stored in the Rx Long numbers buffer
 /// @return true if the number was stored successfully
@@ -424,7 +499,7 @@ bool ATMG8A_USART::Insert_Number_To_Long_Buffer(long l_value)
   // in case of overflow
   if (rxed_LNums_Count > EXT_L_BUFF_SIZE)
   {
-    Reset_Main_Rx_Ptr(rxed_Number_Type);
+    Reset_Main_Rx_Ptr(rxed_Data_Type);
   }
   //-for(uint8_t i = 0; i < BUFFER_SIZE; i++)
   //-{
@@ -433,10 +508,10 @@ bool ATMG8A_USART::Insert_Number_To_Long_Buffer(long l_value)
   // Rx_Buffer[BUFFER_SIZE] = {'\0'};
   return true;
 }
-
+#endif
 /// @brief
 /// @param data : the received byte that will be stored in the Rx buffer
-/// @return
+/// @return the length of the received bytes in the Rx buffer(used buffer size or length
 uint8_t ATMG8A_USART::Insert_Byte_To_MBuffer(unsigned char data)
 {
   // in case of overflow the buffer will be reset and the pointer will be set to the start of the buffer location
@@ -448,7 +523,8 @@ uint8_t ATMG8A_USART::Insert_Byte_To_MBuffer(unsigned char data)
   *Rx_Buffer_Ptr = data;
   Rx_Buffer_Ptr++;
   // update current rx used buffer size and return the total number of received bytes
-  return used_Buffer_Size++;
+  return 0; // used_Buffer_Size++;//- used_Buffer_Size will be calculated with strlen dunction  of the string library when a message completly eceived
+  //- used_Buffer_Size = strlen((const char *)Rx_Buffer);
 }
 
 #if (USE_USART_INTERRUPTS == 1 && USE_RX_INTERRUPT == 1)
@@ -519,6 +595,7 @@ void ATMG8A_USART::USART_Setup_Interrupt(bool rxc, bool dre, bool txc)
 #endif
 
 #if (USE_USART_INTERRUPTS == 1 && USE_RX_INTERRUPT == 1)
+
 ISR(USART_RXC_vect)
 {
 
@@ -614,8 +691,10 @@ bool ATMG8A_USART::Transmit_Number(unsigned char num_type, const char *fmt, floa
 bool ATMG8A_USART::Data_Received()
 {
   bool number_created = false;
-  volatile unsigned char *tmpCharPtr = Rx_Buffer;
-  uint8_t rd_StrSize = used_Rx_Buff_Size;
+  #if ENABLE_STRING_RX == 1
+     // volatile unsigned char *tmpCharPtr = Rx_Buffer;
+   //   int64_t rd_StrSize = used_Rx_Buff_Size;
+  #endif
   // if no buffer used hto store the received numbers
 #if (USE_USART_INTERRUPTS == 0 || (USE_USART_INTERRUPTS == 1 && USE_RX_INTERRUPT == 0))
 
@@ -634,8 +713,9 @@ bool ATMG8A_USART::Data_Received()
 #endif          //@ (USE_USART_INTERRUPTS == 0 || (USE_USART_INTERRUPTS == 1 && USE_RX_INTERRUPT == 0))
   if (EOB_Flag) // new_Data_Received_Flag
   {
-    switch (rxed_Number_Type)
+    switch (rxed_Data_Type)
     {
+#if ENABLE_FLOAT_RX == 1
     case SOB_F:
 
       rxed_Float_Number = (float)(strtod((const char *)Rx_Buffer, NULL));
@@ -657,7 +737,8 @@ bool ATMG8A_USART::Data_Received()
       // #endif
 
       break;
-
+#endif
+#if ENABLE_LONG_RX == 1
     case SOB_I:
       rxed_Long_Number = strtol((const char *)Rx_Buffer, NULL, 10);
 
@@ -667,32 +748,44 @@ bool ATMG8A_USART::Data_Received()
       number_created = true;
       // #endif
       break;
-
+#endif
+#if ENABLE_STRING_RX == 1
     case SOB_S:
+    //  uint8_t msg_length = strlen((const char *)Rx_Buffer);
+      // uint8_t diff = 0;
+      // uint8_t new_length=msg_length;
+      strcpy((char *)message_Buffer, (const char *)mSerPtr->Rx_Buffer);
+      read_Message_Buffer_Ptr = message_Buffer;
+      curr_RX_Msg_Buff_Indx = -1;
       //  #if (USE_TX_RX_BUFFERS == 1)
 
       // in case of overflow
-      if (EXT_S_BUFF_SIZE - curr_RX_Str_Buff_Indx < used_Rx_Buff_Size)
-      {
-        Reset_Main_Rx_Ptr(rxed_Number_Type);
-      }
-
-      // update the read only received string buffer pointer to the start location of the received message
-      read_String_Buffer_Ptr = string_Buffer_Ptr;
-      // Rx_BufferPtr = Rx_Buffer;
-      while (rd_StrSize)
-      // for (uint8_t x=0;x < used_Rx_Buff_Size;x++)
-      {
-        *string_Buffer_Ptr++ = *tmpCharPtr++;
-        curr_RX_Str_Buff_Indx++;
-        rd_StrSize--;
-      }
-      // update the main string buffer pointer to point to the start location of the new received string message
-      string_Buffer_Ptr++;
-      rxed_String_Count++;
+      //- if (EXT_S_BUFF_SIZE - curr_RX_Msg_Buff_Indx < used_Rx_Buff_Size)
+      //- {
+      //-   Reset_Main_Rx_Ptr(rxed_Data_Type);
+      //- }
+        rxed_Msg_Length = used_Buffer_Size;
+      //-----// update the read only received string buffer pointer to the start location of the received message
+      //-----read_Message_Buffer_Ptr = message_Buffer;
+      //-----message_Buffer_Ptr = message_Buffer;
+      //-----// Rx_BufferPtr = Rx_Buffer;
+      //-----while (rd_StrSize > -1)
+      //-----// for (uint8_t x=0;x < used_Rx_Buff_Size;x++)
+      //-----{
+      //-----  *message_Buffer_Ptr++ = *tmpCharPtr++;
+      //-----  curr_RX_Msg_Buff_Indx++;
+      //-----  rd_StrSize--;
+      //-----}
+      //-----// update the main string buffer pointer to point to the start location of the new received string message
+      //-----//-message_Buffer_Ptr++;
+      //-----//-rxed_Msg_Length++;
       number_created = true;
       //  #endif
       break;
+
+    default:
+      break;
+#endif
     }
     // if no interrupts was used to receive data
 #if (USE_USART_INTERRUPTS == 0 || (USE_USART_INTERRUPTS == 1 && USE_RX_INTERRUPT == 0))
@@ -710,302 +803,14 @@ bool ATMG8A_USART::Data_Received()
     //@ to run the action function defined in onDataReceived function on the new received data
     Rx_Buffer[BUFFER_SIZE] = {'\0'};
     used_Rx_Buff_Size = 0;
+#if EXECUTE_AN_ACTION == 1
     action_Executed = false;
+#endif
   }
 
   return number_created;
 }
 #endif
-//>bool ATMG8A_USART::Data_Received()
-//>{
-//>  g_Pos = 1;
-//>  g_Line =Line_1;
-//>  // a temp pointer to the main received char buffer used in case o receiving a string message
-//>  volatile unsigned char * tmpCharPtr=Rx_Buffer;
-//>  bool return_var = false;
-//>  //if no buffer used hto store the received numbers
-//>     #if (USE_TX_RX_BUFFERS == 0)
-//>        if (EOB_Flag) //new_Data_Received_Flag
-//>     #endif
-//>  {
-//>    // dont do that you'll delete the received data
-//>    // Rx_Buffer[BUFFER_SIZE] = {'\0'};
-//>
-//>    // point the converting pointer used by the converting function to the start location of converting which is the current value of Rx_BufferPtr
-//>    //-const char *result_num_ptr = (const char *) Rx_Buffer;
-//>    //already set in the rx interrupt routin
-//>    //  Rx_BufferPtr =  Rx_Buffer;
-//>
-//>    if (rxed_Number_Type == SOB_F)
-//>    {
-//>      //the statment below under test
-//>       // sscanf(result_num_ptr,"%f",&rxed_Float_Number); //(sentence,"%s %*s %d",str,&i);
-//>    //-  fscanf(&fscanf_Rd_Stream,"%f",&rxed_Float_Number);
-//>
-//>      //-rxed_Float_Number = strtod(result_num_ptr,NULL);    //(result_num_ptr, &endPtr);
-//>      rxed_Float_Number = strtod((const char *)Rx_BufferPtr,NULL);
-//>      //if using numbers buffer to store thhe eceived numbs was enabled
-//>          #if (USE_TX_RX_BUFFERS == 1)
-//>              if (rxed_FNums_Count > EXT_BUFF_SIZE)
-//>                {
-//>                  Reset_Main_Rx_Ptr(rxed_Number_Type);
-//>                  ////float_Buffer_Size = 0;
-//>                  // curr_Rx_F_Buff_Indx = -1;
-//>                  // float_Nums_Buffer_Ptr = float_Nums_Buffer;
-//>                  // read_F_Nums_Buffer_Ptr = float_Nums_Buffer;
-//>                  // rxed_FNums_Count = 0;
-//>
-//>                  //return false;
-//>                }
-//>
-//>                *float_Nums_Buffer_Ptr++ = rxed_Float_Number;
-//>                ////float_Buffer_Size++;
-//>                                // update the current index value
-//>                curr_Rx_F_Buff_Indx++;
-//>                rxed_FNums_Count++;
-//>                //! should I update the Read pointer here (read_F_Nums_Buffer_Ptr)
-//>                return_var = true;
-//>          #endif
-//>      //-return true;
-//>    }
-//>
-//>    else if (rxed_Number_Type == SOB_I)
-//>    {
-//>        //in case of overflow
-//>                if (rxed_LNums_Count > EXT_BUFF_SIZE)
-//>                {
-//>                  Reset_Main_Rx_Ptr(rxed_Number_Type);
-//>                  /////long_Buffer_Size = 0;
-//>                  // curr_Rx_L_Buff_Indx = -1;
-//>                  // long_Nums_Buffer_Ptr = long_Nums_Buffer;
-//>                  // read_L_Nums_Buffer_Ptr = long_Nums_Buffer_Ptr;
-//>                  // rxed_LNums_Count = 0;
-//>                  // return false;
-//>
-//>                }
-//>//>max number of digits that can be received as integer number correctly is 9 digits,
-//>      //>max valu can be received correctly as integer number is 999999999
-//>      //>you can receive 10 digit int number ith a maximum value 1999999999
-//>       //the statment below is under test
-//>       //sscanf(result_num_ptr,"%ld",&rxed_Long_Number);
-//>      //- fscanf(&fscanf_Rd_Stream,"%ld",&rxed_Long_Number);
-//>      rxed_Long_Number = strtol((const char *)Rx_BufferPtr, NULL, 10);
-//>      //>max number of digits that can be received as integer number correctly is 7 digits,
-//>      //>max valu can be received correctly as integer number is 9999999
-//>
-//>        //if using numbers buffer to store thhe eceived numbs was enabled
-//>          #if (USE_TX_RX_BUFFERS == 1)
-//>                // update the current index value
-//>                *long_Nums_Buffer_Ptr++ = rxed_Long_Number;
-//>                curr_Rx_L_Buff_Indx++;
-//>                rxed_LNums_Count++;
-//>                 return_var = true;
-//>               ///// long_Buffer_Size++;
-//>               // reset needed parameters for the next number conversion
-//>                    //-Rx_BufferPtr = Rx_Buffer;
-//>                    //-used_Rx_Buff_Size = 0;
-//>                    //-new_Data_Received_Flag = false;
-//>
-//>          #endif
-//>
-//>      //-return true;
-//>    }
-//>
-//>     else  //received data is string message
-//>    {
-//>       //!check the if statement below it should be removed regardless using buffer to store recived data or not because in this case the data is string message
-//>       #if (USE_TX_RX_BUFFERS == 1)
-//>
-//>      //in case of overflow
-//>                if (curr_RX_Str_Buff_Indx >= EXT_BUFF_SIZE)
-//>                {
-//>                  Reset_Main_Rx_Ptr(rxed_Number_Type);
-//>                    // rxed_String_Count = 0;
-//>                    // curr_RX_Str_Buff_Indx = -1;
-//>                    // string_Buffer_Ptr = string_Buffer;
-//>                    // read_String_Buffer_Ptr = string_Buffer;
-//>                  Wink_Led2();
-//>                   Wink_Led2();
-//>                    Wink_Led2();
-//>                     Wink_Led2();
-//>              //    return false;
-//>                }
-//>
-//>       //update the read only received string buffer pointer to the start location of the received message
-//>       read_String_Buffer_Ptr = string_Buffer_Ptr;
-//>
-//>       //while ( *tmpCharPtr != '\0' ) //(* string_Buffer_Ptr != '\0')
-//>       for (uint8_t x=1;x<used_Rx_Buff_Size;x++)
-//>       {
-//>         *string_Buffer_Ptr = *tmpCharPtr ;
-//>         curr_RX_Str_Buff_Indx++;
-//>         string_Buffer_Ptr++ ;
-//>         tmpCharPtr++;
-// for debug
-//>       //********************
-//>        printf("%c",*read_String_Buffer_Ptr++);
-//>       //**********************
-//>       }
-//>       //  read_String_Buffer_Ptr = string_Buffer;
-//>       //update the main string buffer pointer to point to the start location of the new received string message
-//>       //string_Buffer_Ptr++;
-//>
-//>      //    //sign for the beginning of a string message block
-//>      //  *string_Buffer_Ptr++ = START_OF_MSG;
-//>      //   curr_RX_Str_Buff_Indx++;
-//>
-//>       return_var = true;
-//>
-//>                 // reset needed parameters for the next number conversion
-//>                      //-Rx_BufferPtr = Rx_Buffer;
-//>                      //-used_Rx_Buff_Size = 0;
-//>                      //-new_Data_Received_Flag = false;
-//>          #endif
-//>
-//>      //-return true;
-//>    }
-//>
-//>    //Rx_BufferPtr = Rx_Buffer;
-//>    //used_Rx_Buff_Size = 0;
-//>   // new_Data_Received_Flag = false;
-//>  }
-//>
-//>  if (!EOB_Flag)
-//>  {
-//>    used_Rx_Buff_Size = 0;
-//>    //Rx_Buffer[BUFFER_SIZE] = {'\0'};
-//>  }
-//>action_Executed = false;
-//>return return_var;
-//>
-//>}
-
-// return  strtod(endPtr,NULL);
-//   return atof(result_num_ptr);
-// return CustomStrtoF(result_num_ptr);
-
-//*      //>max number of digits that can be received as integer number correctly is 9 digits,
-//*      //>max valu can be received correctly as integer number is 999999999
-//*      //>you can receive 10 digit int number ith a maximum value 1999999999
-//*      rxed_Long_Number = strtol(result_num_ptr, NULL, 10);
-//*      //>max number of digits that can be received as integer number correctly is 7 digits,
-//*      //>max valu can be received correctly as integer number is 9999999
-//*
-
-//?      //>max number of digits that can be received as integer number correctly is 9 digits,
-//?      //>max valu can be received correctly as integer number is 999999999
-//?      //>you can receive 10 digit int number ith a maximum value 1999999999
-//?      rxed_Long_Number = strtol(result_num_ptr, NULL, 10);
-//?      //>max number of digits that can be received as integer number correctly is 7 digits,
-//?      //>max valu can be received correctly as integer number is 9999999
-
-//_void ATMG8A_USART::Transmit_String()
-//_{
-//_  //> reset the pointer to the 1st element in the buffer
-//_  Tx_BufferPtr = Tx_Buffer;
-//_  unsigned char tch = 0;
-//_  do
-//_  {
-//_    tch = *Tx_BufferPtr++;
-//_    if (tch == ' ')
-//_      break;
-//_    Transmit_Char(tch);
-//_    _delay_us(330); // instead of 2 ms   //>Optimum value  = 330us
-//_  }
-//_
-//_  while (*Tx_BufferPtr != '\0');
-//_
-//_  tch = EOB; //? End of transmision
-//_  Transmit_Char(tch);
-//_  { // buff[30]={'\0'}; //clear the buffer
-//_    /* for(uint8_t i=0; i <30;i++)
-//_     {
-//_       Tx_Buffer[i] = '\0';
-//_     }*/}
-//_}
-/**
- * @brief Transmit string using interrupt& pointer technique
- *
- * @param strptr : pointer to the string that will be transmitted
- */
-//*void ATMG8A_USART::Transmit_Message(unsigned char * strptr)
-//*{
-//*  Tx_BufferPtr=Tx_Buffer;
-//*  //transmitted_Chars_Count =0;
-//*  used_Tx_Buffer_Size=0;
-//* //! for(uint8_t x=0;x<BUFFER_SIZE;x++)
-//* //! {
-//* //!   *Tx_BufferPtr = '\0';
-//* //!
-//* //! }
-//* //! Tx_BufferPtr=Tx_Buffer;
-//*  //*Tx_BufferPtr++ = SOB_S;
-//*  Add_Tx_Character(SOB_S);
-//* // unsigned char  * delPtr =Tx_BufferPtr;
-//*  while (* strptr != '\0')
-//*  {
-//*
-//*    Add_Tx_Character(*strptr++);
-//*
-//*
-//*       // Wink_Led3();
-//*        //_delay_ms(900);
-//*  }
-//*
-//* //!python don't need this
-//*// Add_Tx_Character('\0');
-//*//add end of transmission sign
-//* Add_Tx_Character(EOB);
-//*
-//*
-//* //> ptrLCD->LCD_Show_Int(used_Tx_Buffer_Size,Page_1,15,Line_1);
-//* //>  //_delay_ms(500);
-//* //>  //>pos=1;
-//* //.for(uint8_t i =0 ; i < used_Tx_Buffer_Size; i++)
-//* //. {
-//* //.
-//* //.   ptrLCD->LCD_Show_Character(Tx_Buffer[i],Page_1,pos,Line_1);
-//* //.   pos++;
-//* //.   if(pos >used_Tx_Buffer_Size)
-//* //.   pos=1;
-//* //. }
-//* Transmit_String();
-//* //>
-//* //> //reset the Tx buffer pointer once againn to begin sending the string
-//*//!  transmitted_Chars_Count =0;
-//*//!  Tx_BufferPtr=Tx_Buffer;
-//*//!  pos = 1;
-//*//!  for(uint8_t t_ind =0 ; t_ind < used_Tx_Buffer_Size; t_ind++)
-//*//!    {
-//*//!      ptrLCD->LCD_Show_Character(Tx_Buffer[t_ind],Page_1,pos,Line_1);
-//*//!      pos++;
-//*//!      if(pos >used_Tx_Buffer_Size)
-//*//!      pos=1;
-//*//!      Rx_Tx_Intrerrupts.U_DataRegisterEmpty_IINTR = 1;
-//*//!      USART_Setup_Interrupt();
-//*//!   //   Wink_Led2();
-//*//!     // _delay_ms(500);
-//*//!
-//*//! //?         USART_Setup_Interrupt();
-//*//!    }
-//* //>//? while (* strptr != '\0')
-//* //>//?
-//* //>//? {
-//* //>//?    // enabling the tx interrrupt will fire the tx interrupt routine and send a charcter by a charcter
-//* //>//?     if(end_of_Tx_Block_Block)
-//* //>//?       {
-//* //>//?        // Rx_Tx_Intrerrupts.U_DataRegisterEmpty_IINTR = 1;
-//* //>//?        // USART_Setup_Interrupt();
-//* //>//?         strptr++;
-//* //>//?         Wink_Led3();
-//* //>//?       }
-//* //>//? }
-//* //>
-//* //> transmitted_Chars_Count =0;
-//* //> used_Tx_Buffer_Size=0;
-//* //> Tx_BufferPtr=Tx_Buffer;
-//*
-//*}
 
 /// @brief Add a new char to the tx buffer
 /// @param d_chr the tended char to be added into the tX BUFFER
@@ -1039,7 +844,7 @@ void ATMG8A_USART::On_Data_Received(void (*FnPtr)(void))
   // tmpCnt_F = 0;
   // tmpCnt_L =0;
   // tmpCnt_S =0;
-  switch (rxed_Number_Type)
+  switch (rxed_Data_Type)
   {
   case SOB_F:
     // if new numbers were recived
@@ -1096,164 +901,6 @@ void ATMG8A_USART::On_Data_Received(void (*FnPtr)(void))
   }
 }
 #endif
-
-// id ATMG8A_USART::Send_Int(int tx_int)
-//
-/// static int intData{0};
-// static bool higherByteSent{false};// static char ind{1};
-// //unsigned char snd_int{0};
-//
-//  while (! (UCSRA & (1 << UDRE)));
-// // return; //wait untill UDR register is empty
-// if(! higherByteSent)
-//   {
-//
-//      UDR = (tx_int >> 8);    // first send the higher byte
-//      higherByteSent = true; // to send the low byte in the next call
-//   //      _delay_ms(25);     // wait some time to make the receiver able to receive
-//      Send_Int(tx_int) ;
-//
-//   }
-//
-// else
-// {
-//
-//    UDR=tx_int;     // send the lower byte
-//    higherByteSent=false;          // rset to send a new int in the next call
-//  //   _delay_ms(100);
-//    return ;
-// }
-//
-//
-//
-//
-// ol ATMG8A_USART::Receive_Int(int & rx_int)
-//
-//
-// static bool higherBytereceived{false};
-//
-//  //wait for data to be received
-//       while(!(UCSRA & (1 << RXC))) ;
-// //return false;
-//
-//    if(! higherBytereceived)
-//    {
-//      rx_int = 0; // to make sure it's clear before use
-//
-//      rx_int = UDR ;   //receive the Higher byte first
-//      rx_int = (rx_int << 8);  // store the higher byte
-//
-//      higherBytereceived= true;     //to get the lower byte in the next call to the function
-//  //    _delay_ms(25);   // give some time to the snder to send the lower byte
-//      Receive_Int(rx_int);  //get the lower byte of the received int
-//    }
-//
-//  else
-//    {
-//        //Low Byte must coverted to unsighned char or it wil gve wrong result at hiher int value (max 32639,it's suposed to be 32768 in case of  signed int type)
-//          rx_int|=(unsigned char) UDR;   //  finaly receive the lower byte
-//          higherBytereceived=false;  // to get the higher byte of the next number (a new number)
-//          return true;
-//    }
-//      return false;
-//
-//
-// oid ATMG8A_USART::Send_Float_Num(float fn,uint8_t n_width ,uint8_t n_pression )
-//{
-//     dtostrf(fn, n_width, n_pression, Tx_Buffer);
-//      index=0;
-//
-//       bool endOftransmt = false;
-//       uint8_t tmpch = Tx_Buffer[index];
-//
-//      while (!endOftransmt  )
-//        {
-//            if(Tx_Buffer[index] == '\0')
-//                  {
-//                    endOftransmt =true;
-//                  }
-//
-//                Transmit_Byte(tmpch);
-//                index++;
-//                tmpch =Tx_Buffer[index];
-//
-//        }
-//  index=0;
-//}
-//
-// ol ATMG8A_USART::Receive_Float_Num(float & fnum)
-//{
-//  index=0;
-//  bool endOfreceive = false;
-//  uint8_t tmpch{0};
-//
-//            //   Receive_Byte(tmpch);
-//                  while(! endOfreceive )
-//
-//                    {
-//                      Receive_Byte(tmpch);
-//                      Rx_Buffer[index]=tmpch;
-//
-//                       if(tmpch == '\0')
-//                         {
-//                            endOfreceive = true;
-//                            break;
-//                         }
-//
-//                      index++;
-//
-//                    }
-//  fnum = atof(Rx_Buffer);
-//  index=0;
-//     return true;
-//
-//}
-//
-// int8_t ATMG8A_USART::Transmit_String(const char strArr[])
-//{
-//  uint8_t num_of_Chars = 0;
-//   const char* strPtr=strArr;
-//
-//  do
-//       {
-//          while (! (UCSRA & (1 << UDRE))){};       //Do nothing
-//          UDR =(unsigned char) *strPtr++;
-//           PORTC ^= 1<< PC0;
-//
-//         num_of_Chars += 1;
-//       }
-//
-//   while (*strPtr != '\n');//while (*strPtr != '\0');
-//  /* while (! (UCSRA & (1 << UDRE))){};       //Do nothing
-//          UDR =(unsigned char) '\n';*/
-//
-//
-//   return num_of_Chars;
-//}
-//
-// ol ATMG8A_USART::Receive_String()
-//
-//  char rc_char='\0';
-//  uint8_t pos =0;
-//  //> Reset the rx buffer
-//  Rx_Buffer[BUFFER_SIZE] = '\0';
-//    do
-//    {//wait for data to be received
-//      while (! (UCSRA & (1 << RXC))){};
-//
-//      rc_char = (unsigned char)UDR;
-//      Rx_Buffer[pos]=rc_char;
-//      pos+=1;
-//      //PORTD ^= 1 << PD2;
-//
-//      }
-//   while(rc_char != '\0');
-//
-//
-//  return true;
-//
-//* working with python
-// void ATMG8A_USART::USART_Setup_Interrupt(bool DataREI, bool Tx_intr,bool Rx_Intr)
 
 /*void ATMG8A_USART::My_Delay(double t)
 {

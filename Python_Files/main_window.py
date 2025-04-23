@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(787, 633)
+        MainWindow.resize(787, 702)
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.get_Sys_portsBtn = QtWidgets.QPushButton(parent=self.centralwidget)
@@ -102,7 +102,7 @@ class Ui_MainWindow(object):
         self.calculate_Rx_Data_Diff_Btn.setMinimumSize(QtCore.QSize(60, 25))
         self.calculate_Rx_Data_Diff_Btn.setObjectName("calculate_Rx_Data_Diff_Btn")
         self.frame = QtWidgets.QFrame(parent=self.centralwidget)
-        self.frame.setGeometry(QtCore.QRect(30, 480, 271, 81))
+        self.frame.setGeometry(QtCore.QRect(30, 480, 271, 141))
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -123,6 +123,9 @@ class Ui_MainWindow(object):
         self.send_num_EdtWdg = QtWidgets.QLineEdit(parent=self.horizontalLayoutWidget)
         self.send_num_EdtWdg.setObjectName("send_num_EdtWdg")
         self.send_num_layout.addWidget(self.send_num_EdtWdg)
+        self.send_command_Btn = QtWidgets.QPushButton(parent=self.frame)
+        self.send_command_Btn.setGeometry(QtCore.QRect(170, 90, 93, 28))
+        self.send_command_Btn.setObjectName("send_command_Btn")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 787, 26))
@@ -133,7 +136,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        #self.pushButton.clicked.connect(MainWindow.oNSend_Number_Clk) # type: ignore
+       #- self.pushButton.clicked.connect(MainWindow.oNSend_Number_Clk) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -148,6 +151,7 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "Number added progress"))
         self.calculate_Rx_Data_Diff_Btn.setText(_translate("MainWindow", "Calculate Rx differintiation"))
         self.pushButton.setText(_translate("MainWindow", "Send Number"))
+        self.send_command_Btn.setText(_translate("MainWindow", "Send Command"))
 
 
 if __name__ == "__main__":

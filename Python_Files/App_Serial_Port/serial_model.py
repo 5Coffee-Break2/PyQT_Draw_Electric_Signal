@@ -101,7 +101,9 @@ class Serial_Model:
                 return rt,rn
         return
     
-    
+    def Send_Message(self,msg:str):
+        self.__active_Serial_Port__.Send_Message(msg)
+        
     def Send_Number(self,ntype,n_val):
         self.__active_Serial_Port__.Send_Number(ntype,n_val) 
         

@@ -96,6 +96,51 @@ private:
   };
 #endif
 public:
+  //!!!!!!!!!!!! for test /////////////////
+  uint8_t LCD_SHOW_String(const char strArr[], uint8_t x = 1, LineNumber ln = Line_1, Page pn = Page_1);
+  // Structure to represent a position on the LCD.
+  struct Pos_Status
+  {
+    uint8_t row_num;
+    bool row_1_equpied; // uint8_t col;
+    bool row_2_equpied;
+    Pos_Status() : row_num(0),row_1_equpied(false), row_2_equpied(false) {} // Default constructor to initialize to (0,0)
+    //-- Position(int c, int r) : col(c), row(r) {}
+    //-- Position(const Position &other) : col(other.col), row(other.row) {} // Copy constructor
+  };
+  // struct Position
+  // {
+  //    bool col;//uint8_t col;
+  //   uint8_t row;
+
+  //   Position() : col(false), row(0) {} // Default constructor to initialize to (0,0)
+  //                                  //-- Position(int c, int r) : col(c), row(r) {}
+  //                                  //-- Position(const Position &other) : col(other.col), row(other.row) {} // Copy constructor
+
+  //   // Overload the == operator for comparing positions.  Important for using in the set.
+  //   bool
+  //   operator==(const Position &other) const
+  //   {
+  //     return (col == other.col && row == other.row);
+  //   }
+
+  //   // Overload the < operator.  This is required for using Position as key in std::set.
+  //   bool operator<(const Position &other) const
+  //   {
+  //     if (row != other.row)
+  //     {
+  //       return row < other.row;
+  //     }
+  //     else
+  //     {
+  //       return col < other.col;
+  //     }
+  //   }
+  // };
+  //!The index of the array+1 represent the position on the display
+  Pos_Status Display_buffer[16];
+  void ManageDisplay(uint8_t, uint8_t, uint8_t);
+  //!!!!!!!!!!!! for test /////////////////
   //~LCD_HD44780();
 #if USE_SPRINTF == 1
   struct nums_Values num_Value;
@@ -112,7 +157,7 @@ public:
   uint8_t LCD_SHOW_String(const char strArr[], uint8_t x = 1, LineNumber ln = Line_1, Page pn = Page_1);
 #endif
   // #if USE_SPRINTF == 1
-  char strStream[18]; // a global buffer used byprintf and sprintf functions
+
   // #endif
   uint8_t dataRoom; // Store the actual data buffer  length
   Page currentPage;
@@ -162,7 +207,7 @@ public:
 
   void LCD_Clear();
   void LCD_ShowPage(Page);
-  void LCD_Show_Character(char ch, uint8_t pos = 1, LineNumber line = Line_1, Page page = Page_1);
+  void LCD_Display_Character(char ch, uint8_t pos = 1, LineNumber line = Line_1, Page page = Page_1);
 
   /// @brief Move the LCD curssor to a defined position
   /// @param charPosition The required new X position of the cursor (1:16)
